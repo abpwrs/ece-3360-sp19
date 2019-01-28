@@ -1,15 +1,14 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
-; Assembly language file for Lab 1 in 55:036 (Embedded Systems)
+; Assembly language file for Lab 1 in ECE:3360 (Embedded Systems)
 ; Spring 2014, The University of Iowa.
 ;
 ; LEDs are connected via a 470 Ohm resistor from PB1, PB2 to Vcc
 ;
-; A. Kruger, R. Beichel
+; B. Mitchinson, A. Powers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ; Modifiations for a .2484s long delay instead of .261s
-; Done by Alex Powers and Ben Mitchinson
 
 .include "tn45def.inc"
 .cseg
