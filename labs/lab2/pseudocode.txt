@@ -1,0 +1,102 @@
+-- abpwrs & bmitchinson
+-- 02-03-2019
+-- 3360 lab2
+
+-------------------------------------------------------------------------
+
+---^ Requirements: 
+
+-----& toggle
+-------* CONDITION: between 1-2 second button press
+-------* DISPLAY: DP LED on if in decrement mode
+
+-----& increment
+-------* CONDITION: less than 1 second button press and in increment mode
+-------* DISPLAY: increment one value wrapping 0xf to 0x0
+
+-----& decrement
+-------* CONDITION: less than 1 second button press and in decrement mode
+-------* DISPLAY: decrement one value wrapping 0x0 to 0xf
+
+-----& reset
+-------* CONDITION: longer than 2 second button press
+-------* DISPLAY: reset to zero and go to increment mode
+
+-------------------------------------------------------------------------
+
+Note that all counter, mode selection, and reset action 
+must be applied once the pushbutton is released
+
+-------------------------------------------------------------------------
+
+Memory we should track:
+
+One bit representing if decrement mode is set
+--- 0 is increment
+--- 1 is decrement
+we can treat increment as the default mode, because we go back to it on reset
+
+one bit to represent each of the possible lengths of button press
+# reference pseudocode -- this is still a work in progress
+
+-------------------------------------------------------------------------
+
+PSEUDOCODE: --> this is a cluster fuck in a dumpster fire
+go-to tags will be wrapped in &&
+
+IMPORTANT MEMORY:
+[DECREMENT_BIT] --> if set we are in decrement mode
+[MOVE_BIT] --> if set the user has pressed the button and wants to decrement the counter
+[TOGGLE_BIT] --> if set the user has pressed the button and wants to toggle the counter mode
+[RESET_BIT] --> if set the user has pressed the button and wants to reset the counter
+[AWAIT_RELEASE_BIT] --> user is still holding down button
+[INFINITE_LOOP_BIT] --> always set to 1
+
+set_bit [DECREMENT_BIT], 0; 
+set_bit [MOVE_BIT], 0; 
+set_bit [TOGGLE_BIT], 0; 
+set_bit [RESET_BIT], 0; 
+set_bit [AWAIT_RELEASE_BIT], 0; 
+set_bit [INFINITE_LOOP_BIT], 1; 
+
+
+# no while loops in assembly
+main: 
+    while [INFINITE_LOOP_BIT] do
+    
+        if button_pressed
+            CALL{count_press} # this should set certain bits that eval_press will user
+            CALL{eval_press} # this will change the state based on the bits set in count_press
+
+        no-op
+
+    end
+
+
+eval_press:
+    if 
+
+eval_reset:
+
+eval_toggle:
+    # find assembly equivalent of if else
+    if [DECREMENT_BIT] == 1
+    then set_bit [DECREMENT_BIT], 0;
+    else set_bit [DECREMENT_BIT], 1;
+    update_display?
+
+eval_move:
+    update_display?
+
+count_press:
+    set_bit [MOVE_BIT], 1; 
+    set_bit [TOGGLE_BIT], 0; 
+    set_bit [RESET_BIT], 0;  
+
+
+    # we should be perpetually checking if the button is 
+    # pressed so that we the timer reacts immediately
+
+
+        
+
