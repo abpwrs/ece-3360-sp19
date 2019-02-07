@@ -7,8 +7,9 @@
 ;
 ; B. Mitchinson, A. Powers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;
-; 
+; Program Description:
+; main.asm runs the control logic for a buttone controlled counter
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 .include "tn45def.inc"
 .cseg
 .org 0
@@ -18,7 +19,6 @@
 .EQU RCK = 2
 .EQU MAX_VALUE = 15
 
-.
 
 ; ATiny - Register Relations
 ; PB0 = SER IN
@@ -148,7 +148,8 @@ delay_long:
       brne  d1
       ret
 
-; 0-1-1-1-0-1-1-1
+; 0-1-1-1--0-1-1-1
+; 0x77
 disp_zero:
 	rcall shift_one_off
 	rcall shift_one_on
@@ -162,7 +163,8 @@ disp_zero:
 	ret
 
 
-; 0-0-0-0-0-1-1-0
+; 0-0-0-0--0-1-1-0
+; 0x06
 disp_one:
 	rcall shift_one_off
 	rcall shift_one_off
@@ -175,7 +177,8 @@ disp_one:
 	rcall reset_disp
 	ret
 
-; 1-0-1-1-0-0-1-1
+; 1-0-1-1--0-0-1-1
+; 0xB3
 disp_two:
 	rcall shift_one_on
 	rcall shift_one_off
@@ -188,7 +191,8 @@ disp_two:
 	rcall reset_disp
 	ret
 
-;1-0-0-1-0-1-1-1
+;1-0-0-1--0-1-1-1
+; 0x97
 disp_three:
 	rcall shift_one_on
 	rcall shift_one_off
@@ -201,7 +205,8 @@ disp_three:
 	rcall reset_disp
 	ret
 
-; 1-1-0-0-0-1-1-0
+; 1-1-0-0--0-1-1-0
+; 0xC6
 disp_four:
 	rcall shift_one_on
 	rcall shift_one_on
@@ -214,7 +219,8 @@ disp_four:
 	rcall reset_disp
 	ret
 
-; 1-1-0-1-0-1-0-1
+; 1-1-0-1--0-1-0-1
+; 0xD5
 disp_five:
 	rcall shift_one_on
 	rcall shift_one_on
@@ -227,7 +233,8 @@ disp_five:
 	rcall reset_disp
 	ret
 
-; 1-1-1-1-0-1-0-1
+; 1-1-1-1--0-1-0-1
+; 0xF5
 disp_six:
 	rcall shift_one_on
 	rcall shift_one_on
@@ -240,7 +247,8 @@ disp_six:
 	rcall reset_disp
 	ret
 
-; 0-0-0-0-0-1-1-1
+; 0-0-0-0--0-1-1-1
+; 0x07
 disp_seven:
 	rcall shift_one_off
 	rcall shift_one_off
@@ -253,7 +261,8 @@ disp_seven:
 	rcall reset_disp
 	ret
 
-; 1-1-1-1-0-1-1-1
+; 1-1-1-1--0-1-1-1
+; 0xF7
 disp_eight:
 	rcall shift_one_on
 	rcall shift_one_on
@@ -266,7 +275,8 @@ disp_eight:
 	rcall reset_disp
 	ret
 
-; 1-1-0-1-0-1-1-1
+; 1-1-0-1--0-1-1-1
+; 0xD7
 disp_nine:
 	rcall shift_one_on
 	rcall shift_one_on
@@ -279,7 +289,8 @@ disp_nine:
 	rcall reset_disp
 	ret
 
-; 1-1-1-0-0-1-1-1
+; 1-1-1-0--0-1-1-1
+; 0xE7
 disp_a:
 	rcall shift_one_on
 	rcall shift_one_on
@@ -292,7 +303,8 @@ disp_a:
 	rcall reset_disp
 	ret
 
-; 1-1-1-1-0-1-0-0
+; 1-1-1-1--0-1-0-0
+; 0xF4
 disp_b:
 	rcall shift_one_on
 	rcall shift_one_on
@@ -305,8 +317,8 @@ disp_b:
 	rcall reset_disp
 	ret
 
-; 0-1-1-1-0-0-0-1
-; 0-1-1-1-0-0-0-1
+; 0-1-1-1--0-0-0-1
+; 0x71
 disp_c:
 	rcall shift_one_off
 	rcall shift_one_on
@@ -319,7 +331,8 @@ disp_c:
 	rcall reset_disp
 	ret
 
-; 1-0-1-1-0-1-1-0
+; 1-0-1-1--0-1-1-0
+; 0xB6
 disp_d:
 	rcall shift_one_on
 	rcall shift_one_off
@@ -332,7 +345,8 @@ disp_d:
 	rcall reset_disp
 	ret
 
- ;1-1-1-1-0-0-0-1
+; 1-1-1-1--0-0-0-1
+; 0xF1
 disp_e:
 	rcall shift_one_on
 	rcall shift_one_on
@@ -345,7 +359,8 @@ disp_e:
 	rcall reset_disp
 	ret
 
-; 1-1-1-0-0-0-0-1
+; 1-1-1-0--0-0-0-1
+; 0xE1
 disp_f:
 	rcall shift_one_on
 	rcall shift_one_on
