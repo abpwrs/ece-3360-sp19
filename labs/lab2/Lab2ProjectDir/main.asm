@@ -17,6 +17,8 @@
 .EQU SRCK = 1
 .EQU RCK = 2
 
+.
+
 ; ATiny - Register Relations
 ; PB0 = SER IN
 ; PB1 = SRCK
@@ -26,16 +28,30 @@
     sbi DDRB,0;
     sbi DDRB,1
     sbi DDRB,2
-
+	sbi DDRB,3
+	sbi DDRB,4
 ;
   main:
+	sbi PORTB, 3
+	sbi PORTB, 4
     sbi PORTB,SER_IN
+	rcall delay_long
+
 	sbi PORTB,SRCK
-	;cbi PORTB,SRCK
+	rcall delay_long
+
+	cbi PORTB,SRCK
+	rcall delay_long
+
 	sbi PORTB,RCK
 	rcall delay_long
+
+	cbi PORTB, RCK
+	rcall delay_long
+
 	cbi PORTB,SER_IN
 	rcall delay_long
+
 	rjmp main
 	
     
