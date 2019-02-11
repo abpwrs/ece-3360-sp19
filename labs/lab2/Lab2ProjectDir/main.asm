@@ -45,15 +45,14 @@ main:
 nop
 sbis PINB, PUSH_BUTTON ; if button pushed, next line will execute
 rcall button_pressed ; react to the button press
-rcall reset_disp
+;rcall reset_disp
 rjmp main
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	
 button_pressed:
 ldi R18, 0x00 ; set initial state of counter to zero
 rcall count_press
-rcall update
-ret
+rjmp update
 
 ; count press sets certain register values associated with the length of button press
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -71,8 +70,8 @@ ret
 ; my delay of 10000 cycles -- currently ~ 10032 cycles
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 my_delay:
-         ldi   r23,2      ; r23 <-- Counter for outer loop
-  my_d1: ldi   r24,20     ; r24 <-- Counter for level 2 loop 
+         ldi   r23,20      ; r23 <-- Counter for outer loop
+  my_d1: ldi   r24,24     ; r24 <-- Counter for level 2 loop 
   my_d2: ldi   r25,41      ; r25 <-- Counter for inner loop
   my_d3: dec   r25
          nop              ; no operation 
@@ -87,54 +86,41 @@ my_delay:
 ; update the state based on the contents of R17
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 update:
-cpi R18, 0xc8
-brge update_one
+ldi R19, 0x64
+ldi R20, 0xc8
 
-cpi R18, 0x64
-brge update_two
+cp R18, R20
+brsh reset_routine
 
-rjmp update_three
+cp R18, R19
+brsh toggle_routine
 
-update_one:
-rcall reset_routine
-rjmp update_end
-
-update_two:
-rcall toggle_routine
-rjmp update_end
-
-update_three:
-rcall move_routine
-rjmp update_end
-
-
-update_end:
-ret
+rjmp move_routine
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 reset_routine:
 nop
 ldi R16, ZERO_DISP
 rcall display
-rcall delay_long
-ret 
-
+; rcall delay_long
+ldi R18, 0x00 ; set initial state of counter to zero
+rjmp main
 
 toggle_routine:
 nop
 ldi R16,  ONE_DISP
 rcall display
-rcall delay_long
-ret
-
-
+; rcall delay_long
+ldi R18, 0x00 ; set initial state of counter to zero
+rjmp main
 
 move_routine:
 nop
 ldi R16, TWO_DISP
 rcall display
-rcall delay_long
-ret
+;rcall delay_long
+ldi R18, 0x00 ; set initial state of counter to zero
+rjmp main
 
 
 
