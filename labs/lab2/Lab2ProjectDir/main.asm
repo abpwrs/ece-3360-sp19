@@ -3,374 +3,202 @@
 ; Assembly language file for Lab 2 in ECE:3360 (Embedded Systems)
 ; Spring 2018, The University of Iowa.
 ;
-; Desc:
+; Desc: runs the control logic for a buttone controlled counter
 ;
 ; B. Mitchinson, A. Powers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Program Description:
-; main.asm runs the control logic for a buttone controlled counter
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+;
+;
+
 .include "tn45def.inc"
+.include "disp_values.inc"
 .cseg
 .org 0
 
-.EQU SER_IN = 0
-.EQU SRCK = 1
-.EQU RCK = 2
-.EQU MAX_VALUE = 15
+; 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+.equ SER_IN = 0
+.equ SRCK = 1
+.equ RCK = 2
+.equ PUSH_BUTTON = 4
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 ; ATiny - Register Relations
-; PB0 = SER IN
+; PB0 = SER_IN
 ; PB1 = SRCK
 ; PB2 = RCK
-
 ; Configure PB0, PB1, and PB2 as output pins.
-    sbi DDRB,0
-    sbi DDRB,1
-    sbi DDRB,2
-	sbi DDRB,3
-	sbi DDRB,4
-;
-  main:
-;	sbi PORTB, 3
-;	sbi PORTB, 4
-;    sbi PORTB,SER_IN
-;	rcall delay_long
-;
-;	sbi PORTB,SRCK
-;	rcall delay_long
-;
-;	cbi PORTB,SRCK
-;	rcall delay_long
-;
-;	sbi PORTB,RCK
-;	rcall delay_long
-;
-;	cbi PORTB, RCK
-;	rcall delay_long
-;
-;	cbi PORTB,SER_IN
-;	rcall delay_long
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+sbi DDRB,0
+sbi DDRB,1
+sbi DDRB,2
+cbi DDRB,3
+cbi DDRB,4
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;	rcall shift_one_on
-;	rcall shift_one_on
-;	rcall reset_disp
-;	rcall delay_long
-;	rcall shift_one_off
-;	rcall shift_one_off
-;	rcall reset_disp
-;	rcall delay_long
 
-	rcall disp_zero
-	rcall delay_long
-
-	rcall disp_one
-	rcall delay_long
-
-	rcall disp_two
-	rcall delay_long
-
-	rcall disp_three
-	rcall delay_long
-
-	rcall disp_four
-	rcall delay_long
-
-	rcall disp_five
-	rcall delay_long
-
-	rcall disp_six
-	rcall delay_long
-
-	rcall disp_seven
-	rcall delay_long
-
-	rcall disp_eight
-	rcall delay_long
-
-	rcall disp_nine
-	rcall delay_long
-
-	rcall disp_a
-	rcall delay_long
-
-	rcall disp_b
-	rcall delay_long
-
-	rcall disp_c
-	rcall delay_long
-
-	rcall disp_d
-	rcall delay_long
-
-	rcall disp_e
-	rcall delay_long
-
-	rcall disp_f
-	rcall delay_long
-
-	rjmp main
+; main method -- infinite loop to keep the controller responding to input
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+main:
+nop
+sbis PINB, PUSH_BUTTON ; if button pushed, next line will execute
+rcall button_pressed ; react to the button press
+rjmp main
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	
-shift_one_on:
-	sbi PORTB, SER_IN
-	nop
-	sbi PORTB, SRCK
-	nop
-	cbi PORTB, SRCK
-	ret
+button_pressed:
+ldi R18, 0x00 ; set initial state of counter to zero
+rcall count_press
+rcall update
+ret
 
-shift_one_off:
-	cbi PORTB, SER_IN
-	nop
-	sbi PORTB, SRCK
-	nop
-	cbi PORTB, SRCK
-	ret
+; count press sets certain register values associated with the length of button press
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+count_press:
 
-reset_disp:
-	sbi PORTB, RCK
-	nop
-	cbi PORTB, RCK
-	ret
-    
-    
+
+sbis PINB, PUSH_BUTTON ; if button is still pressed, execute next line
+rjmp count_press ; rjmp to this method
+ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; my delay of 10000 cycles -- currently ~ 10032 cycles
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+my_delay:
+         ldi   r23,3      ; r23 <-- Counter for outer loop
+  my_d1: ldi   r24,20     ; r24 <-- Counter for level 2 loop 
+  my_d2: ldi   r25,41      ; r25 <-- Counter for inner loop
+  my_d3: dec   r25
+         nop              ; no operation 
+         brne  my_d3 
+         dec   r24
+         brne  my_d2
+         dec   r23
+         brne  my_d1
+         ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; update the state based on the contents of R17
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+update:
+nop
+ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
+; Display subroutine that prints to the LCD the associate hex value in R16
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+display:
+; backup used registers on stack
+push R16
+push R17
+in R17, SREG
+push R17
+ldi R17, 8 
+; loop --> test all 8 bits
+loop:
+rol R16 ;rotate left trough Carry
+BRCS set_ser_in_1 
+; branch if Carry set
+; put code here to set SER_IN to 0
+cbi PORTB, SER_IN
+rjmp end
+set_ser_in_1:
+; put code here to set SER_IN to 1
+sbi PORTB, SER_IN
+end:
+; put code here to generate SRCK pulse
+sbi PORTB, SRCK
+nop
+nop
+cbi PORTB, SRCK
+dec R17
+brne loop
+; put code here to generate RCK pulse
+sbi PORTB, RCK
+nop
+nop
+cbi PORTB, RCK
+; restore registers from stack
+pop R17
+out SREG, R17
+pop R17
+pop R16
+ret  
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; subroutine for delay -- this isn't used in the final product
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 delay_long:
-      ldi   r23,20      ; r23 <-- Counter for outer loop
-  d1: ldi   r24,226     ; r24 <-- Counter for level 2 loop 
-  d2: ldi   r25,249     ; r25 <-- Counter for inner loop
+      ldi   r23,2      ; r23 <-- Counter for outer loop
+  d1: ldi   r24,200     ; r24 <-- Counter for level 2 loop 
+  d2: ldi   r25,200     ; r25 <-- Counter for inner loop
   d3: dec   r25
-      nop               ; no operation 
+      nop              ; no operation 
       brne  d3 
       dec   r24
       brne  d2
       dec   r23
       brne  d1
       ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; 0-1-1-1--0-1-1-1
-; 0x77
-disp_zero:
-	rcall shift_one_off
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_off
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall reset_disp
-	ret
+; subroutine to print out all digits
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+print_all:
+ldi R16, ZERO_DISP
+rcall display
+rcall delay_long
+ldi R16, ONE_DISP
+rcall display
+rcall delay_long
+ldi R16, TWO_DISP
+rcall display
+rcall delay_long
+ldi R16, THREE_DISP
+rcall display
+rcall delay_long
+ldi R16, FOUR_DISP
+rcall display
+rcall delay_long
+ldi R16, FIVE_DISP
+rcall display
+rcall delay_long
+ldi R16, SIX_DISP
+rcall display
+rcall delay_long
+ldi R16, SEVEN_DISP
+rcall display
+rcall delay_long
+ldi R16, EIGHT_DISP
+rcall display
+rcall delay_long
+ldi R16, NINE_DISP
+rcall display
+rcall delay_long
+ldi R16, A_DISP
+rcall display
+rcall delay_long
+ldi R16, B_DISP
+rcall display
+rcall delay_long
+ldi R16, C_DISP
+rcall display
+rcall delay_long
+ldi R16, D_DISP
+rcall display
+rcall delay_long
+ldi R16, E_DISP
+rcall display
+rcall delay_long
+ldi R16, F_DISP
+rcall display
+rcall delay_long
+ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
-; 0-0-0-0--0-1-1-0
-; 0x06
-disp_one:
-	rcall shift_one_off
-	rcall shift_one_off
-	rcall shift_one_off
-	rcall shift_one_off
-	rcall shift_one_off
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_off
-	rcall reset_disp
-	ret
-
-; 1-0-1-1--0-0-1-1
-; 0xB3
-disp_two:
-	rcall shift_one_on
-	rcall shift_one_off
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_off
-	rcall shift_one_off
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall reset_disp
-	ret
-
-;1-0-0-1--0-1-1-1
-; 0x97
-disp_three:
-	rcall shift_one_on
-	rcall shift_one_off
-	rcall shift_one_off
-	rcall shift_one_on
-	rcall shift_one_off
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall reset_disp
-	ret
-
-; 1-1-0-0--0-1-1-0
-; 0xC6
-disp_four:
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_off
-	rcall shift_one_off
-	rcall shift_one_off
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_off
-	rcall reset_disp
-	ret
-
-; 1-1-0-1--0-1-0-1
-; 0xD5
-disp_five:
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_off
-	rcall shift_one_on
-	rcall shift_one_off
-	rcall shift_one_on
-	rcall shift_one_off
-	rcall shift_one_on
-	rcall reset_disp
-	ret
-
-; 1-1-1-1--0-1-0-1
-; 0xF5
-disp_six:
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_off
-	rcall shift_one_on
-	rcall shift_one_off
-	rcall shift_one_on
-	rcall reset_disp
-	ret
-
-; 0-0-0-0--0-1-1-1
-; 0x07
-disp_seven:
-	rcall shift_one_off
-	rcall shift_one_off
-	rcall shift_one_off
-	rcall shift_one_off
-	rcall shift_one_off
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall reset_disp
-	ret
-
-; 1-1-1-1--0-1-1-1
-; 0xF7
-disp_eight:
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_off
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall reset_disp
-	ret
-
-; 1-1-0-1--0-1-1-1
-; 0xD7
-disp_nine:
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_off
-	rcall shift_one_on
-	rcall shift_one_off
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall reset_disp
-	ret
-
-; 1-1-1-0--0-1-1-1
-; 0xE7
-disp_a:
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_off
-	rcall shift_one_off
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall reset_disp
-	ret
-
-; 1-1-1-1--0-1-0-0
-; 0xF4
-disp_b:
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_off
-	rcall shift_one_on
-	rcall shift_one_off
-	rcall shift_one_off
-	rcall reset_disp
-	ret
-
-; 0-1-1-1--0-0-0-1
-; 0x71
-disp_c:
-	rcall shift_one_off
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_off
-	rcall shift_one_off
-	rcall shift_one_off
-	rcall shift_one_on
-	rcall reset_disp
-	ret
-
-; 1-0-1-1--0-1-1-0
-; 0xB6
-disp_d:
-	rcall shift_one_on
-	rcall shift_one_off
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_off
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_off
-	rcall reset_disp
-	ret
-
-; 1-1-1-1--0-0-0-1
-; 0xF1
-disp_e:
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_off
-	rcall shift_one_off
-	rcall shift_one_off
-	rcall shift_one_on
-	rcall reset_disp
-	ret
-
-; 1-1-1-0--0-0-0-1
-; 0xE1
-disp_f:
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_on
-	rcall shift_one_off
-	rcall shift_one_off
-	rcall shift_one_off
-	rcall shift_one_off
-	rcall shift_one_on
-	rcall reset_disp
-	ret
-
+; end of program -- should never be reached due to main infinite loop
 .exit
