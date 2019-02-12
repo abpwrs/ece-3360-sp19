@@ -16,8 +16,8 @@
 
 .ESEG
 .org 0
-disp_table:
-.db ZERO_DISP, ONE_DISP, TWO_DISP, THREE_DISP, FOUR_DISP, FIVE_DISP, SIX_DISP, SEVEN_DISP, EIGHT_DISP, NINE_DISP, A_DISP, B_DISP, C_DISP, D_DISP, E_DISP, F_DISP 
+;disp_table:
+;.db ZERO_DISP, ONE_DISP, TWO_DISP, THREE_DISP, FOUR_DISP, FIVE_DISP, SIX_DISP, SEVEN_DISP, EIGHT_DISP, NINE_DISP, A_DISP, B_DISP, C_DISP, D_DISP, E_DISP, F_DISP 
 
 .cseg
 .org 0
@@ -47,14 +47,14 @@ sbi DDRB,2
 cbi DDRB,3
 cbi DDRB,4
 
-ldi ZH, high(disp_table*2)
-ldi ZL, low(disp_table*2)
+;ldi ZH, high(disp_table*2)
+;ldi ZL, low(disp_table*2)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 ; main method -- infinite loop to keep the controller responding to input
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-lpm DISP_REG, Z
+;lpm DISP_REG, Z
 rcall display
 main:
 nop
@@ -71,7 +71,7 @@ rjmp update
 ; count press sets certain register values associated with the length of button press
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 count_press:
-rcall my_delay
+rcall sample_delay
 cpi BUTTON_TIME_REG, 255
 breq skip
 inc BUTTON_TIME_REG
@@ -81,9 +81,10 @@ rjmp count_press ; rjmp to this method
 ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+; TODO: Update with proper desmos calc: 
 ; my delay of 10000 cycles -- currently ~ 10032 cycles
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-my_delay:
+sample_delay:
          ldi   r23,20      ; r23 <-- Counter for outer loop
   my_d1: ldi   r24,24     ; r24 <-- Counter for level 2 loop 
   my_d2: ldi   r25,41      ; r25 <-- Counter for inner loop
@@ -111,6 +112,7 @@ rjmp move_routine
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 reset_routine:
+; TODO: do we need nops to start our routines?
 nop
 ;;;;;;;;;;;;;;; CHANGE LOOKUP TABLE PTR TO ZERO
 ldi DISP_REG, ZERO_DISP
@@ -118,29 +120,32 @@ rcall display
 ldi DEC_REG, 0x00
 rjmp main
 
-
 toggle_routine:
 nop
-cpi DEC_REG, 0x00
-brne toggle_dec_off
-rjmp toggle_dec_on
+ldi DISP_REG, ONE_DISP
+rcall display
+rjmp main
+;cpi DEC_REG, 0x00
+;brne toggle_dec_off
+;rjmp toggle_dec_on
+
+move_routine:
+nop
+ldi DISP_REG, TWO_DISP
+rcall display
+rjmp main
 
 toggle_dec_on:
 ldi DEC_REG, 0x01
+; TODO: why not just rjmp main. why another subroutine
 rjmp toggle_end
 
 toggle_dec_off:
 ldi DEC_REG, 0x00
+; TODO: why not just rnmp main. why another subroutine
 rjmp toggle_end
 
 toggle_end:
-rjmp main
-
-move_routine:
-nop
-ldi DISP_REG, ZERO_DISP
-rcall display
-ldi BUTTON_TIME_REG, 0x00 ; set initial state of counter to zero
 rjmp main
 
 ; Display subroutine that prints to the LCD the associate hex value in DISP_REG
