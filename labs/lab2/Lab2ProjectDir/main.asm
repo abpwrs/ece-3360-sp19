@@ -13,8 +13,15 @@
 
 .include "tn45def.inc"
 .include "disp_values.inc"
+
+.ESEG
+.org 0
+disp_table:
+.db ZERO_DISP, ONE_DISP, TWO_DISP, THREE_DISP, FOUR_DISP, FIVE_DISP, SIX_DISP, SEVEN_DISP, EIGHT_DISP, NINE_DISP, A_DISP, B_DISP, C_DISP, D_DISP, E_DISP, F_DISP 
+
 .cseg
 .org 0
+
 
 ; 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -23,7 +30,10 @@
 .equ RCK = 2
 .equ PUSH_BUTTON = 4
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
+.DEF DISP_REG = R16
+.DEF BUTTON_TIME_REG = R18
+.DEF DEC_REG = R19
+.DEF Z_OFFSET = R20
 
 ; ATiny - Register Relations
 ; PB0 = SER_IN
@@ -36,21 +46,25 @@ sbi DDRB,1
 sbi DDRB,2
 cbi DDRB,3
 cbi DDRB,4
+
+ldi ZH, high(disp_table*2)
+ldi ZL, low(disp_table*2)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 ; main method -- infinite loop to keep the controller responding to input
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+lpm DISP_REG, Z
+rcall display
 main:
 nop
 sbis PINB, PUSH_BUTTON ; if button pushed, next line will execute
 rcall button_pressed ; react to the button press
-;rcall reset_disp
 rjmp main
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	
 button_pressed:
-ldi R18, 0x00 ; set initial state of counter to zero
+ldi BUTTON_TIME_REG, 0x00 ; set initial state of counter to zero
 rcall count_press
 rjmp update
 
@@ -58,9 +72,9 @@ rjmp update
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 count_press:
 rcall my_delay
-cpi R18, 255
+cpi BUTTON_TIME_REG, 255
 breq skip
-inc R18
+inc BUTTON_TIME_REG
 skip:
 sbis PINB, PUSH_BUTTON ; if button is still pressed, execute next line
 rjmp count_press ; rjmp to this method
@@ -83,16 +97,14 @@ my_delay:
          ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; update the state based on the contents of R17
+; update the state based on the contents of BUTTON_TIME_REG
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 update:
-ldi R19, 0x64
-ldi R20, 0xc8
 
-cp R18, R20
+cpi BUTTON_TIME_REG, 200
 brsh reset_routine
 
-cp R18, R19
+cpi BUTTON_TIME_REG, 100
 brsh toggle_routine
 
 rjmp move_routine
@@ -100,42 +112,49 @@ rjmp move_routine
 
 reset_routine:
 nop
-ldi R16, ZERO_DISP
+;;;;;;;;;;;;;;; CHANGE LOOKUP TABLE PTR TO ZERO
+ldi DISP_REG, ZERO_DISP
 rcall display
-; rcall delay_long
-ldi R18, 0x00 ; set initial state of counter to zero
+ldi DEC_REG, 0x00
 rjmp main
+
 
 toggle_routine:
 nop
-ldi R16,  ONE_DISP
-rcall display
-; rcall delay_long
-ldi R18, 0x00 ; set initial state of counter to zero
+cpi DEC_REG, 0x00
+brne toggle_dec_off
+rjmp toggle_dec_on
+
+toggle_dec_on:
+ldi DEC_REG, 0x01
+rjmp toggle_end
+
+toggle_dec_off:
+ldi DEC_REG, 0x00
+rjmp toggle_end
+
+toggle_end:
 rjmp main
 
 move_routine:
 nop
-ldi R16, TWO_DISP
+ldi DISP_REG, ZERO_DISP
 rcall display
-;rcall delay_long
-ldi R18, 0x00 ; set initial state of counter to zero
+ldi BUTTON_TIME_REG, 0x00 ; set initial state of counter to zero
 rjmp main
 
-
-
-; Display subroutine that prints to the LCD the associate hex value in R16
+; Display subroutine that prints to the LCD the associate hex value in DISP_REG
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 display:
 ; backup used registers on stack
-push R16
+push DISP_REG
 push R17
 in R17, SREG
 push R17
 ldi R17, 8 
 ; loop --> test all 8 bits
 loop:
-rol R16 ;rotate left trough Carry
+rol DISP_REG ;rotate left trough Carry
 BRCS set_ser_in_1 
 ; branch if Carry set
 ; put code here to set SER_IN to 0
@@ -161,7 +180,7 @@ cbi PORTB, RCK
 pop R17
 out SREG, R17
 pop R17
-pop R16
+pop DISP_REG
 ret  
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -184,62 +203,56 @@ delay_long:
 ; subroutine to print out all digits
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 print_all:
-ldi R16, ZERO_DISP
+ldi DISP_REG, ZERO_DISP
 rcall display
 rcall delay_long
-ldi R16, ONE_DISP
+ldi DISP_REG, ONE_DISP
 rcall display
 rcall delay_long
-ldi R16, TWO_DISP
+ldi DISP_REG, TWO_DISP
 rcall display
 rcall delay_long
-ldi R16, THREE_DISP
+ldi DISP_REG, THREE_DISP
 rcall display
 rcall delay_long
-ldi R16, FOUR_DISP
+ldi DISP_REG, FOUR_DISP
 rcall display
 rcall delay_long
-ldi R16, FIVE_DISP
+ldi DISP_REG, FIVE_DISP
 rcall display
 rcall delay_long
-ldi R16, SIX_DISP
+ldi DISP_REG, SIX_DISP
 rcall display
 rcall delay_long
-ldi R16, SEVEN_DISP
+ldi DISP_REG, SEVEN_DISP
 rcall display
 rcall delay_long
-ldi R16, EIGHT_DISP
+ldi DISP_REG, EIGHT_DISP
 rcall display
 rcall delay_long
-ldi R16, NINE_DISP
+ldi DISP_REG, NINE_DISP
 rcall display
 rcall delay_long
-ldi R16, A_DISP
+ldi DISP_REG, A_DISP
 rcall display
 rcall delay_long
-ldi R16, B_DISP
+ldi DISP_REG, B_DISP
 rcall display
 rcall delay_long
-ldi R16, C_DISP
+ldi DISP_REG, C_DISP
 rcall display
 rcall delay_long
-ldi R16, D_DISP
+ldi DISP_REG, D_DISP
 rcall display
 rcall delay_long
-ldi R16, E_DISP
+ldi DISP_REG, E_DISP
 rcall display
 rcall delay_long
-ldi R16, F_DISP
+ldi DISP_REG, F_DISP
 rcall display
 rcall delay_long
 ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-reset_disp:
-ldi R16, 0x00
-rcall display
-ret
 
 ; end of program -- should never be reached due to main infinite loop
 .exit
