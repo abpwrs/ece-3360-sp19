@@ -14,14 +14,21 @@
 .include "tn45def.inc"
 .include "disp_values.inc"
 
-.ESEG
-.org 0
-;disp_table:
-;.db ZERO_DISP, ONE_DISP, TWO_DISP, THREE_DISP, FOUR_DISP, FIVE_DISP, SIX_DISP, SEVEN_DISP, EIGHT_DISP, NINE_DISP, A_DISP, B_DISP, C_DISP, D_DISP, E_DISP, F_DISP 
+.dseg
+.org 0x0060 ;Tiny45, Start in SRAM
+;disp_table: .db 0x77, 0x06, 0xB3, 0x97, 0xC6, 0xD5, 0xF5, 0x07, 0xF7, 0xD7, 0xE7, 0xF4, 0x71, 0xB6, 0xF1, 0xE1
+disp_table: .byte 16
 
 .cseg
-.org 0
+.org 0x0000
 
+;test initialize SRAM
+ldi r20, 0x77
+sts disp_table, r20
+ldi r20, 0x06
+sts disp_table+1, r20
+ldi r20, 0xB3
+sts disp_table+2, r20
 
 ; 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -47,14 +54,13 @@ sbi DDRB,2
 cbi DDRB,3
 cbi DDRB,4
 
-;ldi ZH, high(disp_table*2)
-;ldi ZL, low(disp_table*2)
+ldi ZL, low(disp_table) ;r30
+ldi ZH, high(disp_table) ;r31
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 ; main method -- infinite loop to keep the controller responding to input
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;lpm DISP_REG, Z
 rcall display
 main:
 nop
@@ -112,9 +118,8 @@ rjmp move_routine
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 reset_routine:
-; TODO: do we need nops to start our routines?
 nop
-;;;;;;;;;;;;;;; CHANGE LOOKUP TABLE PTR TO ZERO
+;;;;;;;;;;;;;;; TODO: CHANGE LOOKUP TABLE PTR TO ZERO
 ldi DISP_REG, ZERO_DISP
 rcall display
 ldi DEC_REG, 0x00
@@ -131,7 +136,7 @@ rjmp main
 
 move_routine:
 nop
-ldi DISP_REG, TWO_DISP
+ld DISP_REG, Z+
 rcall display
 rjmp main
 
@@ -159,7 +164,7 @@ push R17
 ldi R17, 8 
 ; loop --> test all 8 bits
 loop:
-rol DISP_REG ;rotate left trough Carry
+rol DISP_REG ;rotate left through Carry
 BRCS set_ser_in_1 
 ; branch if Carry set
 ; put code here to set SER_IN to 0
