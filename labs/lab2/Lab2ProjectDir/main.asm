@@ -111,10 +111,16 @@ rjmp update
 count_press:
 rcall sample_delay
 cpi PRESS_TIME_REG, 255
-inc PRESS_TIME_REG
+brlo increment_time
 sbis PINB, PUSH_BUTTON ; if button is still pressed, execute next line
 rjmp count_press ; rjmp to this method
 ret
+
+increment_time:
+inc PRESS_TIME_REG
+sbis PINB, PUSH_BUTTON
+rjmp count_press
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; TODO: Update with proper desmos calc: 
