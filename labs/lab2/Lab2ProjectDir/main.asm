@@ -7,9 +7,9 @@
 ;
 ; B. Mitchinson, A. Powers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;
-;
-;
+; TODO: Revise all comments
+; TODO: Replace r30 with z low. Just Z? Z high doesn't have usage at
+; this point.
 
 .include "tn45def.inc"
 .include "disp_values.inc"
@@ -24,6 +24,7 @@ disp_table: .byte 16
 
 ; test initialize SRAM
 ; TODO: Can I move this out to a different file? Can disp_table be a db like the original goal?
+; During 2/12 lecture he advised to move it to cseg as db since it's static right?
 ldi r20, 0x77
 sts disp_table, r20
 ldi r20, 0x06
@@ -56,6 +57,10 @@ ldi r20, 0xf1
 sts disp_table+14, r20
 ldi r20, 0xe1
 sts disp_table+15, r20
+clr r20
+
+; test
+ldi r20, 95
 
 ; 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -64,10 +69,10 @@ sts disp_table+15, r20
 .equ RCK = 2
 .equ PUSH_BUTTON = 4
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-.DEF DISP_REG = R16
-.DEF BUTTON_TIME_REG = R18
-.DEF DEC_REG = R19
-.DEF Z_OFFSET = R20
+.DEF DISP_REG = r16
+.DEF DISP_INS_REG = r17
+.DEF PRESS_TIME_REG = r18
+.DEF DEC_REG = r19
 
 ; ATiny - Register Relations
 ; PB0 = SER_IN
@@ -88,7 +93,7 @@ ldi ZH, high(disp_table) ;r31
 
 ; main method -- infinite loop to keep the controller responding to input
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-rcall display
+rcall reset_routine
 main:
 nop
 sbis PINB, PUSH_BUTTON ; if button pushed, next line will execute
@@ -97,7 +102,7 @@ rjmp main
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	
 button_pressed:
-ldi BUTTON_TIME_REG, 0x00 ; set initial state of counter to zero
+ldi PRESS_TIME_REG, 0x00 ; set initial state of counter to zero
 rcall count_press
 rjmp update
 
@@ -105,10 +110,8 @@ rjmp update
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 count_press:
 rcall sample_delay
-cpi BUTTON_TIME_REG, 255
-breq skip
-inc BUTTON_TIME_REG
-skip:
+cpi PRESS_TIME_REG, 255
+inc PRESS_TIME_REG
 sbis PINB, PUSH_BUTTON ; if button is still pressed, execute next line
 rjmp count_press ; rjmp to this method
 ret
@@ -131,14 +134,17 @@ sample_delay:
          ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; update the state based on the contents of BUTTON_TIME_REG
+; update the state based on the contents of PRESS_TIME_REG
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 update:
 
-cpi BUTTON_TIME_REG, 200
+; TEST CASE
+;add PRESS_TIME_REG, r20
+
+cpi PRESS_TIME_REG, 200
 brsh reset_routine
 
-cpi BUTTON_TIME_REG, 100
+cpi PRESS_TIME_REG, 100
 brsh toggle_routine
 
 rjmp move_routine
@@ -147,57 +153,101 @@ rjmp move_routine
 reset_routine:
 nop
 ;;;;;;;;;;;;;;; TODO: CHANGE LOOKUP TABLE PTR TO ZERO
-ldi DISP_REG, ZERO_DISP
+ldi ZL, 0x60
+ld DISP_REG, Z
 rcall display
-ldi DEC_REG, 0x00
 rjmp main
 
 toggle_routine:
 nop
-ldi DISP_REG, ONE_DISP
-rcall display
-rjmp main
-;cpi DEC_REG, 0x00
-;brne toggle_dec_off
-;rjmp toggle_dec_on
+cpi DEC_REG, 0x00
+breq toggle_dec_on
+cpi DEC_REG, 0x00
+brne toggle_dec_off
+rjmp main ;saftey. could remove, but just incase.
 
 move_routine:
 nop
+; branching: 
+;if dec -> if overflow: edit r30 (or) else dec
+;if inc -> if overflow: edit r30 (or) else inc
+cpi r30, 0x6F
+breq pos_overflow
+cpi r30, 0x60
+breq neg_overflow
+cpi DEC_REG, 0x01
+brne pos_counter
+cpi DEC_REG, 0x00
+brne neg_counter
+rjmp main ; saftey
+
+; Is this really the best way to do nested conditionals? 
+; dedicated sub routines?
+neg_overflow:
+cpi DEC_REG, 0x01
+breq bottom_overflow
+cpi DEC_REG, 0x01
+brne pos_counter
+rjmp main ; saftey
+
+pos_overflow:
+cpi DEC_REG, 0x00
+breq reset_routine
+cpi DEC_REG, 0x00
+brne neg_counter
+rjmp main
+
+pos_counter: 
 ld DISP_REG, Z+
+ld DISP_REG, Z
+rcall display
+rjmp main
+
+neg_counter:
+ld DISP_REG, -Z
+ld DISP_REG, Z
+rcall display
+rjmp main
+
+bottom_overflow: ; inverse "reset"
+ldi ZL, 0x6F
+ld DISP_REG, Z
 rcall display
 rjmp main
 
 toggle_dec_on:
-; Don't think this toggle actually adds the needed bit to the existing value right?
-; need "set/clear bit in register" ?
 ldi DEC_REG, 0x01
-; TODO: why not just rjmp main. why another subroutine
-rjmp toggle_end
+rcall display
+rjmp main
 
 toggle_dec_off:
 ldi DEC_REG, 0x00
-; TODO: why not just rnmp main. why another subroutine
-rjmp toggle_end
-
-toggle_end:
+rcall display
 rjmp main
 
 ; Display subroutine that prints to the LCD the associate hex value in DISP_REG
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 add_dp:
-ori DISP_REG, 0b00001000
+sbr DISP_REG, 8
+rjmp dp_return
+
+remove_dp:
+cbr DISP_REG, 8
 rjmp dp_return
 
 display:
 cpi DEC_REG, 0x00
 brne add_dp
+cpi DEC_REG, 0x01
+brne remove_dp
+
 dp_return:
 ; backup used registers on stack
 push DISP_REG
-push R17
-in R17, SREG
-push R17
-ldi R17, 8 
+push DISP_INS_REG
+in DISP_INS_REG, SREG
+push DISP_INS_REG
+ldi DISP_INS_REG, 8 
 ; loop --> test all 8 bits
 loop:
 rol DISP_REG ;rotate left through Carry
@@ -215,7 +265,7 @@ sbi PORTB, SRCK
 nop
 nop
 cbi PORTB, SRCK
-dec R17
+dec DISP_INS_REG
 brne loop
 ; put code here to generate RCK pulse
 sbi PORTB, RCK
@@ -223,9 +273,9 @@ nop
 nop
 cbi PORTB, RCK
 ; restore registers from stack
-pop R17
-out SREG, R17
-pop R17
+pop DISP_INS_REG
+out SREG, DISP_INS_REG
+pop DISP_INS_REG
 pop DISP_REG
 ret  
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
