@@ -22,13 +22,40 @@ disp_table: .byte 16
 .cseg
 .org 0x0000
 
-;test initialize SRAM
+; test initialize SRAM
+; TODO: Can I move this out to a different file? Can disp_table be a db like the original goal?
 ldi r20, 0x77
 sts disp_table, r20
 ldi r20, 0x06
 sts disp_table+1, r20
 ldi r20, 0xB3
 sts disp_table+2, r20
+ldi r20, 0x97
+sts disp_table+3, r20
+ldi r20, 0xc6
+sts disp_table+4, r20
+ldi r20, 0xd5
+sts disp_table+5, r20
+ldi r20, 0xf5
+sts disp_table+6, r20
+ldi r20, 0x07
+sts disp_table+7, r20
+ldi r20, 0xf7
+sts disp_table+8, r20
+ldi r20, 0xd7
+sts disp_table+9, r20
+ldi r20, 0xe7
+sts disp_table+10, r20
+ldi r20, 0xf4
+sts disp_table+11, r20
+ldi r20, 0x71
+sts disp_table+12, r20
+ldi r20, 0xb6
+sts disp_table+13, r20
+ldi r20, 0xf1
+sts disp_table+14, r20
+ldi r20, 0xe1
+sts disp_table+15, r20
 
 ; 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -141,6 +168,8 @@ rcall display
 rjmp main
 
 toggle_dec_on:
+; Don't think this toggle actually adds the needed bit to the existing value right?
+; need "set/clear bit in register" ?
 ldi DEC_REG, 0x01
 ; TODO: why not just rjmp main. why another subroutine
 rjmp toggle_end
