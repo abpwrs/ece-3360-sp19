@@ -184,7 +184,14 @@ rjmp main
 
 ; Display subroutine that prints to the LCD the associate hex value in DISP_REG
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+add_dp:
+ori DISP_REG, 0b00001000
+rjmp dp_return
+
 display:
+cpi DEC_REG, 0x00
+brne add_dp
+dp_return:
 ; backup used registers on stack
 push DISP_REG
 push R17
