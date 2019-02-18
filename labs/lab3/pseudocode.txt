@@ -1,0 +1,71 @@
+
+
+
+how to control duty-cycle ~~ worked through this with josh
+---------------------------------
+255
+|
+|
+|
+UPPER_BOUND(70% duty cycle) -- need to calculate this based on clock
+|
+|
+|
+|
+127 -- (50% duty cylce)
+|
+DUTY_REG -- varies with rpg
+|
+|
+|
+|
+LOWER_BOUND(30% duty cycle) -- need to calculate this based on clock
+|
+|
+|
+|
+0
+---------------------------------
+
+
+output_pin_value = 1;
+for(int curr=0; curr<255; ++curr ){
+	if (curr >= DUTY_REG){
+		output_pin_value = 0;
+	}
+}
+
+
+
+
+how to determine fast or slow turn ~~ also worked through with josh
+---------------------------------
+int turn_counter = 0;
+int fast_threshold = 20; -- fine tune this by playng with the rpg
+bool fast_mode = false; -- default to slow mode
+
+bool direction_change(){
+	some method to check if direction has changed
+}
+
+also
+if (direction_change()){
+	turn_counter = 0;
+}
+
+also reset turn counter every m clock cycles so that we are measureing a rate and not just a total count
+
+call this method every n clock cycles to update the mode
+bool check_mode(){
+	if (turn_counter > threshold){
+		fast_mode = True;
+	}
+}
+
+
+
+
+
+
+---------------------------------
+
