@@ -37,18 +37,33 @@ sbi DDRB, 2
 // variables for duty-cycle range control
 ////////////////////////////////////////////////////////////////////////////////
 // TODO: define a variable for the upper limit ~ based on the frequency on the lab webpage
-.equ upper_cycle_limit = 70
+.equ upper_cycle_limit = 255
 // TODO: define a variable for the lower limit ~ same as above
-.equ lower_cycle_limit = 30
-// TODO: define a register to hold the current value of the duty cycle?
+.equ lower_cycle_limit = 0
+.equ half_duty_cycle = 150
 .def duty_reg = r18
 ////////////////////////////////////////////////////////////////////////////////
+
+
+.equ BOTH_ON = 0x00
+.equ A_ON = 0x01
+.equ B_ON = 0x02
+.equ BOTH_OFF = 0x03
+// 0 - both on   0b00000000
+// 1 - clockwise  0b00000001
+// 2 - counter    0b00000010
+// 3 - both off    0b00000011
+// A is bit position 1
+// B is bit position 0
+
 
 
 // variables for rotation speed
 ////////////////////////////////////////////////////////////////////////////////
 // TODO: define a threshold between fast and slow rotation
 // TODO: define a variable to store the state (fast or slow)
+.def rate_reg = r19
+ldi rate_reg, 0x01 
 ////////////////////////////////////////////////////////////////////////////////
 
 //=============================================================================
@@ -63,13 +78,15 @@ sbi DDRB, 2
 
 // main method (infinite update loop) 
 ////////////////////////////////////////////////////////////////////////////////
+ldi duty_reg, half_duty_cycle
 main:
     nop
     // TODO: delay --> delay will likely need to vary if we have variable turning rate
 	rcall read_rpg
 	nop
 	rcall which_direction
-	// rcall disp_cycle
+	nop
+	rcall disp_cycle
 	// sbi PINB, 2
     rjmp main
 ////////////////////////////////////////////////////////////////////////////////
@@ -78,14 +95,6 @@ main:
 
 // all subroutines here, grouped by functionality
 ////////////////////////////////////////////////////////////////////////////////
-
-
-// 0 - both on   0b00000000
-// 1 - clockwise  0b00000001
-// 2 - counter    0b00000010
-// 3 - both off    0b00000011
-// A is bit position 1
-// B is ibit position 0
 
 
 // reading from rotary pulse generator
@@ -114,21 +123,19 @@ read_rpg:
 // figure out the direction the rpg is being turned
 which_direction:
     nop
-	// TODO: figure out direction
-	// TODO: call corresponding subroutine based on direction
-	cpi previous_state, 0x00
+	cpi previous_state, BOTH_ON
 	breq which_end
 
 	// if current state low
-	cpi current_state, 0x03
+	cpi current_state, BOTH_OFF
 	breq current_low
 	rjmp which_end
 
 	current_low:
-		cpi previous_state, 0x01
-		breq clockwise
-		cpi previous_state, 0x02
+		cpi previous_state, A_ON
 		breq counter_clockwise
+		cpi previous_state, B_ON
+		breq clockwise
 		rjmp which_end
 
 	which_end:
@@ -139,20 +146,59 @@ which_direction:
 // clockwise
 clockwise:
     nop
+
 	// TODO: increase duty-cycle
-	sbi PORTB, 2
+	push r28
+	mov r28, duty_reg
+	add r28, rate_reg
+	cpi r28, upper_cycle_limit
+	brsh end_cwise 
+	add duty_reg, rate_reg
+	end_cwise:
+	pop r28
 	ret
 
 // counter_clockwise
 counter_clockwise:
     nop
 	// TODO: decrease duty-cycle
-	cbi PORTB, 2
+	push r28
+	mov r28, duty_reg
+	add r28, rate_reg
+
+	cpi r28, lower_cycle_limit
+	brsh dec_ccwise 
+	rjmp end_ccwise
+
+	dec_ccwise:
+	sub duty_reg, rate_reg
+
+	end_ccwise:
+	pop r28
 	ret
 
 disp_cycle:
 	nop
+	ldi r28, 0xFF
+	ldi r29, 0x00
+	disp_loop:
+	inc r29
+
+	cp r29, duty_reg
+	brsh disp_zero
+	sbi PINB, 2
+	rjmp disp_end
+
+	disp_zero:
+	cbi PINB, 2
+
+	disp_end:
+
+	cp r28, r29
+	brne disp_loop
+
 	ret
+
 
 ////////////////////////////////////////////////////////////////////////////////
 
