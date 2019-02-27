@@ -37,10 +37,10 @@ sbi DDRB, 2
 // variables for duty-cycle range control
 ////////////////////////////////////////////////////////////////////////////////
 // TODO: define a variable for the upper limit ~ based on the frequency on the lab webpage
-.equ upper_cycle_limit = 254
+.equ upper_cycle_limit = 20
 // TODO: define a variable for the lower limit ~ same as above
-.equ lower_cycle_limit = 2
-.equ half_duty_cycle = 127
+.equ lower_cycle_limit = 200
+.equ half_duty_cycle = 110
 .def duty_reg = r18
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -63,8 +63,7 @@ sbi DDRB, 2
 // TODO: define a threshold between fast and slow rotation
 // TODO: define a variable to store the state (fast or slow)
 .def rate_reg = r19
-ldi rate_reg, 0x0A
-////////////////////////////////////////////////////////////////////////////////
+ldi rate_reg, 0x01////////////////////////////////////////////////////////////////////////////////
 
 //=============================================================================
 
@@ -82,16 +81,16 @@ ldi duty_reg, half_duty_cycle
 main:
     nop
     // TODO: delay --> delay will likely need to vary if we have variable turning rate
-	cbi PORTB, 2
-	rcall delay_thirty
+	//cbi PORTB, 2
+	//rcall delay_thirty
 	nop
     rcall read_rpg
     nop
     rcall which_direction
     nop
 	rcall disp_cycle
-	sbi PORTB, 2 
-	rcall delay_thirty
+	//sbi PORTB, 2 
+	//rcall delay_thirty
     rjmp main
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -148,60 +147,55 @@ which_direction:
 
 // clockwise
 clockwise:
-    nop
-
     // TODO: increase duty-cycle
-    push r28
-    mov r28, duty_reg
-    add r28, rate_reg
-    cpi r28, upper_cycle_limit
-    brsh end_cwise
     add duty_reg, rate_reg
+    cpi duty_reg, upper_cycle_limit
+    brsh recover_upper
+	rjmp end_cwise
+	recover_upper:
+	ldi duty_reg, upper_cycle_limit
     end_cwise:
-    pop r28
     ret
 
 // counter_clockwise
 counter_clockwise:
-    nop
     // TODO: decrease duty-cycle
-    push r28
-    mov r28, duty_reg
-    sub r28, rate_reg
-
-    cpi r28, lower_cycle_limit
-    brsh dec_ccwise
-    rjmp end_ccwise
-
-    dec_ccwise:
     sub duty_reg, rate_reg
-
+    cpi duty_reg, lower_cycle_limit
+    brsh end_ccwise
+	ldi duty_reg, lower_cycle_limit
     end_ccwise:
-    pop r28
-
     ret
 
 disp_cycle:
-    nop
-    ldi r28, 0xFF
+	cbi PORTB, 2
+    ldi r28, 0xDC
     ldi r29, 0x00
-    disp_loop:
+
+    zero_loop:
+	nop
+	nop
+	nop
+	nop
+	nop
     inc r29
-
     cp r29, duty_reg
-    brsh disp_one
-    cbi PORTB, 2
-    rjmp disp_end
+    brsh intermediate
+    rjmp zero_loop
 
-    disp_one:
-    sbi PORTB, 2
-	rjmp disp_end
+	intermediate:
+	sbi PORTB, 2
+	rjmp one_loop
 
-    disp_end:
-
-    cp r28, r29
-    brne disp_loop
-
+	one_loop:
+	nop
+	nop
+	nop
+	nop
+	nop
+	inc r29
+	cp r28, r29
+    brne one_loop
     ret
 
 
