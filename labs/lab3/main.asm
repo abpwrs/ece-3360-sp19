@@ -37,10 +37,10 @@ sbi DDRB, 2
 // variables for duty-cycle range control
 ////////////////////////////////////////////////////////////////////////////////
 // TODO: define a variable for the upper limit ~ based on the frequency on the lab webpage
-.equ upper_cycle_limit = 255
+.equ upper_cycle_limit = 121
 // TODO: define a variable for the lower limit ~ same as above
-.equ lower_cycle_limit = 0
-.equ half_duty_cycle = 150
+.equ lower_cycle_limit = 99
+.equ half_duty_cycle = 100
 .def duty_reg = r18
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -63,7 +63,7 @@ sbi DDRB, 2
 // TODO: define a threshold between fast and slow rotation
 // TODO: define a variable to store the state (fast or slow)
 .def rate_reg = r19
-ldi rate_reg, 0x01 
+ldi rate_reg, 0x0A 
 ////////////////////////////////////////////////////////////////////////////////
 
 //=============================================================================
@@ -86,7 +86,9 @@ main:
 	nop
 	rcall which_direction
 	nop
-	rcall disp_cycle
+
+
+	// rcall disp_cycle
 	// sbi PINB, 2
     rjmp main
 ////////////////////////////////////////////////////////////////////////////////
@@ -139,7 +141,6 @@ which_direction:
 		rjmp which_end
 
 	which_end:
-
 	ret
 
 
@@ -175,6 +176,7 @@ counter_clockwise:
 
 	end_ccwise:
 	pop r28
+
 	ret
 
 disp_cycle:
