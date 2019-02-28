@@ -37,10 +37,12 @@ sbi DDRB, 2
 // variables for duty-cycle range control
 ////////////////////////////////////////////////////////////////////////////////
 // TODO: define a variable for the upper limit ~ based on the frequency on the lab webpage
-.equ upper_cycle_limit = 200
+//.equ upper_cycle_limit = 200
+.equ upper_cycle_limit = 165
 // TODO: define a variable for the lower limit ~ same as above
-.equ lower_cycle_limit = 150
-.equ half_duty_cycle = 175
+//.equ lower_cycle_limit = 150
+.equ lower_cycle_limit = 37
+.equ half_duty_cycle = 100
 .def duty_reg = r18
 ldi duty_reg, half_duty_cycle
 ////////////////////////////////////////////////////////////////////////////////
@@ -102,13 +104,15 @@ main:
     nop
 
     cbi PORTB, 2
-    ldi count, 255
+    // ldi count, 255
+    ldi count, 200
+
     sub count, duty_reg
     rcall delay
 
     sbi PORTB, 2
-	//rcall delay_mini
-	//rcall delay_mini
+	// rcall delay_mini
+	// rcall delay_mini
     mov count, duty_reg
     rcall delay
 
