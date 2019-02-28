@@ -38,10 +38,10 @@ sbi DDRB, 2
 ////////////////////////////////////////////////////////////////////////////////
 // TODO: define a variable for the upper limit ~ based on the frequency on the lab webpage
 //.equ upper_cycle_limit = 200
-.equ upper_cycle_limit = 165
+.equ upper_cycle_limit = 162
 // TODO: define a variable for the lower limit ~ same as above
 //.equ lower_cycle_limit = 150
-.equ lower_cycle_limit = 37
+.equ lower_cycle_limit = 30
 .equ half_duty_cycle = 100
 .def duty_reg = r18
 ldi duty_reg, half_duty_cycle
@@ -105,7 +105,7 @@ main:
 
     cbi PORTB, 2
     // ldi count, 255
-    ldi count, 200
+    ldi count, 206
 
     sub count, duty_reg
     rcall delay
@@ -192,38 +192,6 @@ counter_clockwise:
     end_ccwise:
     ret
 
-disp_cycle:
-        cbi PORTB, 2
-    ldi r28, 0xDC
-    ldi r29, 0x00
-
-    zero_loop:
-    nop
-    nop
-    nop
-    nop
-    nop
-    inc r29
-    cp r29, duty_reg
-    brsh intermediate
-    rjmp zero_loop
-
-    intermediate:
-    sbi PORTB, 2
-    rjmp one_loop
-
-    one_loop:
-    nop
-    nop
-    nop
-    nop
-    nop
-    inc r29
-    cp r28, r29
-    brne one_loop
-    ret
-
-
 ////////////////////////////////////////////////////////////////////////////////
 
 
@@ -233,14 +201,6 @@ disp_cycle:
 ////////////////////////////////////////////////////////////////////////////////
 
 //=============================================================================
-
-delay_mini:
-      ldi   r31, 46
-  d3: dec   r31
-      nop
-      brne  d3
-      ret
-
 
 delay:
     ; Stop timer 0
