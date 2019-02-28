@@ -16,7 +16,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 .include "tn45def.inc"
 ////////////////////////////////////////////////////////////////////////////////
-
+.cseg
 
 // set DDRB States -- we only have input pins for this lab (I think)
 ////////////////////////////////////////////////////////////////////////////////
@@ -37,11 +37,24 @@ sbi DDRB, 2
 // variables for duty-cycle range control
 ////////////////////////////////////////////////////////////////////////////////
 // TODO: define a variable for the upper limit ~ based on the frequency on the lab webpage
-.equ upper_cycle_limit = 20
+.equ upper_cycle_limit = 220
 // TODO: define a variable for the lower limit ~ same as above
-.equ lower_cycle_limit = 200
-.equ half_duty_cycle = 110
+.equ lower_cycle_limit = 94
+.equ half_duty_cycle = 157
 .def duty_reg = r18
+ldi duty_reg, half_duty_cycle
+////////////////////////////////////////////////////////////////////////////////
+
+
+// Timer Registers
+////////////////////////////////////////////////////////////////////////////////
+.def tmp1 = r23
+.def tmp2 = r24
+.def count = r25
+ldi r30, 0x02
+out TCCR0B, r30
+ldi r30, 0x00
+
 ////////////////////////////////////////////////////////////////////////////////
 
 
@@ -63,7 +76,8 @@ sbi DDRB, 2
 // TODO: define a threshold between fast and slow rotation
 // TODO: define a variable to store the state (fast or slow)
 .def rate_reg = r19
-ldi rate_reg, 0x01////////////////////////////////////////////////////////////////////////////////
+ldi rate_reg, 0x01 
+////////////////////////////////////////////////////////////////////////////////
 
 //=============================================================================
 
@@ -77,20 +91,27 @@ ldi rate_reg, 0x01//////////////////////////////////////////////////////////////
 
 // main method (infinite update loop)
 ////////////////////////////////////////////////////////////////////////////////
-ldi duty_reg, half_duty_cycle
+
 main:
     nop
     // TODO: delay --> delay will likely need to vary if we have variable turning rate
-	//cbi PORTB, 2
-	//rcall delay_thirty
 	nop
     rcall read_rpg
     nop
     rcall which_direction
     nop
-	rcall disp_cycle
-	//sbi PORTB, 2 
-	//rcall delay_thirty
+	//rcall disp_cycle
+	cbi PORTB, 2
+	rcall delay_mini
+	ldi count, 255
+	sub count, duty_reg
+	rcall delay
+
+	sbi PORTB, 2
+	rcall delay_mini
+	mov count, duty_reg
+	rcall delay
+	
     rjmp main
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -209,18 +230,37 @@ disp_cycle:
 
 //=============================================================================
 
-delay_thirty:
-      ldi   r23,1      ; r23 <-- Counter for outer loop
-  d1: ldi   r24,1    ; r24 <-- Counter for level 2 loop
-  d2: ldi   r25,149     ; r25 <-- Counter for inner loop
-  d3: dec   r25
-      nop               ; no operation
+delay_mini:
+      ldi   r31, 46 
+  d3: dec   r31
+      nop       
       brne  d3
-      dec   r24
-      brne  d2
-      dec   r23
-      brne  d1
       ret
+
+
+delay:
+    ; Stop timer 0
+	in tmp1, TCCR0B
+	ldi tmp2, 0x00
+	out TCCR0B, tmp2
+
+	; Clear over flow flag
+	in tmp2, TIFR
+	sbr tmp2, 1<<TOV0
+	out TIFR, tmp2
+
+	; Start timer with new initial count
+	out TCNT0, count
+	out TCCR0B, tmp1
+
+	; wait
+wait:
+    in tmp2, TIFR
+	sbrs tmp2, TOV0
+	rjmp wait
+
+.	ret
+
 
 // exit main.asm
 // (control should never reach this point as we have a main infinite loop)
