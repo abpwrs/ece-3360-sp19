@@ -7,7 +7,7 @@
 // Authors: B. Mitchinson, A. Powers
 ////////////////////////////////////////////////////////////////////////////////
 
-// defenitions and preprocessor directives
+// definitions and preprocessor directives
 //=============================================================================
 
 // .inc include files
