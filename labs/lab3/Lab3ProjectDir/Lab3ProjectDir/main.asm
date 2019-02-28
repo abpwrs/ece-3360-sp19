@@ -7,9 +7,7 @@
 // Authors: B. Mitchinson, A. Powers
 ////////////////////////////////////////////////////////////////////////////////
 
-
-
-// Defenitions and Preprocessor Directives
+// defenitions and preprocessor directives
 //=============================================================================
 
 // .inc include files
@@ -18,17 +16,15 @@
 ////////////////////////////////////////////////////////////////////////////////
 .cseg
 
-// set DDRB States -- we only have input pins for this lab (I think)
+// set DDRB
 ////////////////////////////////////////////////////////////////////////////////
 cbi DDRB, 0
 cbi DDRB, 1
 sbi DDRB, 2
 ////////////////////////////////////////////////////////////////////////////////
 
-
 // variables for current and previous state of the rpg
 ////////////////////////////////////////////////////////////////////////////////
-// TODO: define a previous and current state register
 .def current_state = r16
 .def previous_state = r17
 ////////////////////////////////////////////////////////////////////////////////
@@ -36,19 +32,20 @@ sbi DDRB, 2
 
 // variables for duty-cycle range control
 ////////////////////////////////////////////////////////////////////////////////
-// TODO: define a variable for the upper limit ~ based on the frequency on the lab webpage
-//.equ upper_cycle_limit = 200
 .equ upper_cycle_limit = 162
-// TODO: define a variable for the lower limit ~ same as above
-//.equ lower_cycle_limit = 150
 .equ lower_cycle_limit = 30
 .equ half_duty_cycle = 100
 .def duty_reg = r18
 ldi duty_reg, half_duty_cycle
 ////////////////////////////////////////////////////////////////////////////////
 
+// variables for rotation speed
+////////////////////////////////////////////////////////////////////////////////
+.def rate_reg = r19
+ldi rate_reg, 0x01
+////////////////////////////////////////////////////////////////////////////////
 
-// Timer Registers
+// timer registers
 ////////////////////////////////////////////////////////////////////////////////
 .def tmp1 = r23
 .def tmp2 = r24
@@ -57,9 +54,8 @@ ldi r30, 0x02
 out TCCR0B, r30
 ldi r30, 0x00
 
+// rpg signal interpretation registers
 ////////////////////////////////////////////////////////////////////////////////
-
-
 .equ BOTH_ON = 0x00
 .equ A_ON = 0x01
 .equ B_ON = 0x02
@@ -72,47 +68,29 @@ ldi r30, 0x00
 // B is bit position 0
 
 
-
-// variables for rotation speed
-////////////////////////////////////////////////////////////////////////////////
-// TODO: define a threshold between fast and slow rotation
-// TODO: define a variable to store the state (fast or slow)
-.def rate_reg = r19
-ldi rate_reg, 0x01
-////////////////////////////////////////////////////////////////////////////////
-
+// subroutines and program logic
 //=============================================================================
 
-
-
-
-
-
-// Subroutines and Program Logic
-//=============================================================================
 
 // main method (infinite update loop)
 ////////////////////////////////////////////////////////////////////////////////
 
 main:
     nop
-    // TODO: delay --> delay will likely need to vary if we have variable turning rate
-        nop
+    nop
     rcall read_rpg
     nop
     rcall which_direction
     nop
 
     cbi PORTB, 2
-    // ldi count, 255
-    ldi count, 206
 
+    ldi count, 206
     sub count, duty_reg
     rcall delay
 
     sbi PORTB, 2
-	// rcall delay_mini
-	// rcall delay_mini
+
     mov count, duty_reg
     rcall delay
 
@@ -172,7 +150,6 @@ which_direction:
 
 // clockwise
 clockwise:
-    // TODO: increase duty-cycle
     add duty_reg, rate_reg
     cpi duty_reg, upper_cycle_limit
     brsh recover_upper
@@ -184,7 +161,6 @@ clockwise:
 
 // counter_clockwise
 counter_clockwise:
-    // TODO: decrease duty-cycle
     sub duty_reg, rate_reg
     cpi duty_reg, lower_cycle_limit
     brsh end_ccwise
@@ -193,14 +169,6 @@ counter_clockwise:
     ret
 
 ////////////////////////////////////////////////////////////////////////////////
-
-
-// dealing with rate of turn?????
-////////////////////////////////////////////////////////////////////////////////
-// THIS IS FOR ALL THE MARBLES
-////////////////////////////////////////////////////////////////////////////////
-
-//=============================================================================
 
 delay:
     ; Stop timer 0
@@ -217,7 +185,7 @@ delay:
     out TCNT0, count
     out TCCR0B, tmp1
 
-    ; wait
+; wait
 wait:
     in tmp2, TIFR
     sbrs tmp2, TOV0
@@ -229,4 +197,3 @@ wait:
 // exit main.asm
 // (control should never reach this point as we have a main infinite loop)
 .exit
-
