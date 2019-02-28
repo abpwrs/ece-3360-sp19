@@ -11,9 +11,9 @@
     <OutputFileExtension>.obj</OutputFileExtension>
     <OutputDirectory>$(MSBuildProjectDirectory)\$(Configuration)</OutputDirectory>
     <Language>ASSEMBLY</Language>
-    <AssemblyName>AssemblerApplication1</AssemblyName>
-    <Name>AssemblerApplication1</Name>
-    <RootNamespace>AssemblerApplication1</RootNamespace>
+    <AssemblyName>Lab3ProjectDir</AssemblyName>
+    <Name>Lab3ProjectDir</Name>
+    <RootNamespace>Lab3ProjectDir</RootNamespace>
     <ToolchainFlavour>Native</ToolchainFlavour>
     <EntryFile>$(MSBuildProjectDirectory)\main.asm</EntryFile>
     <KeepTimersRunning>true</KeepTimersRunning>
@@ -43,25 +43,10 @@
     <avrtool>com.atmel.avrdbg.tool.simulator</avrtool>
     <avrtoolserialnumber />
     <avrdeviceexpectedsignature>0x1E9206</avrdeviceexpectedsignature>
-    <com_atmel_avrdbg_tool_stk500>
-      <ToolOptions>
-        <InterfaceProperties>
-        </InterfaceProperties>
-        <InterfaceName>
-        </InterfaceName>
-      </ToolOptions>
-      <ToolType>com.atmel.avrdbg.tool.stk500</ToolType>
-      <ToolNumber>
-      </ToolNumber>
-      <ToolName>STK500</ToolName>
-    </com_atmel_avrdbg_tool_stk500>
-    <avrtoolinterface />
     <com_atmel_avrdbg_tool_simulator>
       <ToolOptions xmlns="">
         <InterfaceProperties>
         </InterfaceProperties>
-        <InterfaceName>
-        </InterfaceName>
       </ToolOptions>
       <ToolType xmlns="">com.atmel.avrdbg.tool.simulator</ToolType>
       <ToolNumber xmlns="">

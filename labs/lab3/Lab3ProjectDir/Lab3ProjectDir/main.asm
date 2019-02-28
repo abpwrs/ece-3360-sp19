@@ -37,10 +37,10 @@ sbi DDRB, 2
 // variables for duty-cycle range control
 ////////////////////////////////////////////////////////////////////////////////
 // TODO: define a variable for the upper limit ~ based on the frequency on the lab webpage
-.equ upper_cycle_limit = 220
+.equ upper_cycle_limit = 200
 // TODO: define a variable for the lower limit ~ same as above
-.equ lower_cycle_limit = 94
-.equ half_duty_cycle = 157
+.equ lower_cycle_limit = 150
+.equ half_duty_cycle = 175
 .def duty_reg = r18
 ldi duty_reg, half_duty_cycle
 ////////////////////////////////////////////////////////////////////////////////
@@ -76,7 +76,7 @@ ldi r30, 0x00
 // TODO: define a threshold between fast and slow rotation
 // TODO: define a variable to store the state (fast or slow)
 .def rate_reg = r19
-ldi rate_reg, 0x01 
+ldi rate_reg, 0x01
 ////////////////////////////////////////////////////////////////////////////////
 
 //=============================================================================
@@ -95,23 +95,23 @@ ldi rate_reg, 0x01
 main:
     nop
     // TODO: delay --> delay will likely need to vary if we have variable turning rate
-	nop
+        nop
     rcall read_rpg
     nop
     rcall which_direction
     nop
-	//rcall disp_cycle
-	cbi PORTB, 2
-	rcall delay_mini
-	ldi count, 255
-	sub count, duty_reg
-	rcall delay
 
-	sbi PORTB, 2
-	rcall delay_mini
-	mov count, duty_reg
-	rcall delay
-	
+    cbi PORTB, 2
+    ldi count, 255
+    sub count, duty_reg
+    rcall delay
+
+    sbi PORTB, 2
+	//rcall delay_mini
+	//rcall delay_mini
+    mov count, duty_reg
+    rcall delay
+
     rjmp main
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -156,11 +156,11 @@ which_direction:
     rjmp which_end
 
     current_low:
-        cpi previous_state, A_ON
-        breq counter_clockwise
-        cpi previous_state, B_ON
-        breq clockwise
-        rjmp which_end
+    cpi previous_state, A_ON
+    breq counter_clockwise
+    cpi previous_state, B_ON
+    breq clockwise
+    rjmp which_end
 
     which_end:
     ret
@@ -172,9 +172,9 @@ clockwise:
     add duty_reg, rate_reg
     cpi duty_reg, upper_cycle_limit
     brsh recover_upper
-	rjmp end_cwise
-	recover_upper:
-	ldi duty_reg, upper_cycle_limit
+    rjmp end_cwise
+    recover_upper:
+    ldi duty_reg, upper_cycle_limit
     end_cwise:
     ret
 
@@ -184,38 +184,38 @@ counter_clockwise:
     sub duty_reg, rate_reg
     cpi duty_reg, lower_cycle_limit
     brsh end_ccwise
-	ldi duty_reg, lower_cycle_limit
+    ldi duty_reg, lower_cycle_limit
     end_ccwise:
     ret
 
 disp_cycle:
-	cbi PORTB, 2
+        cbi PORTB, 2
     ldi r28, 0xDC
     ldi r29, 0x00
 
     zero_loop:
-	nop
-	nop
-	nop
-	nop
-	nop
+    nop
+    nop
+    nop
+    nop
+    nop
     inc r29
     cp r29, duty_reg
     brsh intermediate
     rjmp zero_loop
 
-	intermediate:
-	sbi PORTB, 2
-	rjmp one_loop
+    intermediate:
+    sbi PORTB, 2
+    rjmp one_loop
 
-	one_loop:
-	nop
-	nop
-	nop
-	nop
-	nop
-	inc r29
-	cp r28, r29
+    one_loop:
+    nop
+    nop
+    nop
+    nop
+    nop
+    inc r29
+    cp r28, r29
     brne one_loop
     ret
 
@@ -231,37 +231,38 @@ disp_cycle:
 //=============================================================================
 
 delay_mini:
-      ldi   r31, 46 
+      ldi   r31, 46
   d3: dec   r31
-      nop       
+      nop
       brne  d3
       ret
 
 
 delay:
     ; Stop timer 0
-	in tmp1, TCCR0B
-	ldi tmp2, 0x00
-	out TCCR0B, tmp2
+    in tmp1, TCCR0B
+    ldi tmp2, 0x00
+    out TCCR0B, tmp2
 
-	; Clear over flow flag
-	in tmp2, TIFR
-	sbr tmp2, 1<<TOV0
-	out TIFR, tmp2
+    ; Clear over flow flag
+    in tmp2, TIFR
+    sbr tmp2, 1<<TOV0
+    out TIFR, tmp2
 
-	; Start timer with new initial count
-	out TCNT0, count
-	out TCCR0B, tmp1
+    ; Start timer with new initial count
+    out TCNT0, count
+    out TCCR0B, tmp1
 
-	; wait
+    ; wait
 wait:
     in tmp2, TIFR
-	sbrs tmp2, TOV0
-	rjmp wait
+    sbrs tmp2, TOV0
+    rjmp wait
 
-.	ret
+    ret
 
 
 // exit main.asm
 // (control should never reach this point as we have a main infinite loop)
 .exit
+
