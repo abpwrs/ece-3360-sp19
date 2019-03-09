@@ -125,7 +125,7 @@ main:
 	rcall which_direction
 	out OCR0B, duty_reg
 	rcall delay*/
-	rcall lcd_init
+	//rcall lcd_init
 	nop
 
 	nop
@@ -214,11 +214,11 @@ set_to_8_bit_mode:
 	rcall lcd_strobe
 	nop
 	sbi PORTB, E
-	nop
+	rcall delay_200_us
 	ldi data_reg, 0x03
 	nop
 	out PORTC, data_reg
-	nop
+	rcall delay_200_us
 	cbi PORTB, E
 	nop
 	rcall lcd_strobe
@@ -232,11 +232,11 @@ set_to_4_bit_mode:
 	rcall lcd_strobe
 	nop
 	sbi PORTB, E
-	nop
+	rcall delay_200_us
 	ldi data_reg, 0x02
 	nop
 	out PORTC, data_reg
-	nop
+	rcall delay_200_us
 	cbi PORTB, E
 	nop
 	rcall lcd_strobe
