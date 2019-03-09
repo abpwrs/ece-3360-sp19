@@ -84,7 +84,7 @@ pop r30
 
 // LCDstr
 //////////////////////////////////////////////////////////////////////
-LCDstr: .db 0x33, 0x32, 0x28, 0x01, 0x0c, 0x06
+;LCDstr: .db 0x33, 0x32, 0x28, 0x01, 0x0c, 0x06
 //////////////////////////////////////////////////////////////////////
 
 
@@ -112,10 +112,22 @@ out OCR0B, duty_reg ; Set PWM flip point at 100
 ; Replace with your application code
 
 
-
-
 rcall lcd_init
-//rcall msg1
+rcall delay_10_ms
+sbi PORTB, RS
+rcall delay_10_ms
+
+ldi data_reg, 0x04
+rcall load_command_nibble
+rcall delay_10_ms
+ldi data_reg, 0x01
+rcall load_command_nibble
+rcall delay_10_ms
+
+;msg1: .db "DC = ",0x00 
+;ldi r30,LOW(2*msg1)    ; Load Z register low 
+;ldi r31,HIGH(2*msg1)   ; Load Z register high
+;rcall displayCString
 
 main:
 
@@ -131,11 +143,7 @@ main:
 	nop
     rjmp main
 
-msg1: 
-	.db "DC = ",0x00 
-	ldi r30,LOW(2*msg1)    ; Load Z register low 
-	ldi r31,HIGH(2*msg1)   ; Load Z register high
-	rcall displayCString
+
 
 displayCString: 
 	lpm r0,Z+               ; <-- first byte 
@@ -143,10 +151,12 @@ displayCString:
 	breq done               ; Yes => quit 
 	swap  r0                ; Upper nibble in place 
 	out   PORTC,r0          ; Send upper nibble out 
-	rcall lcd_strobe         ; Latch nibble 
+	rcall lcd_strobe         ; Latch nibble 	
+	rcall delay_10_ms
 	swap  r0                ; Lower nibble in place 
 	out   PORTC,r0          ; Send lower nibble out 
 	rcall lcd_strobe         ; Latch nibble 
+	rcall delay_10_ms
 	rjmp displayCstring 
 done: 
 	ret
