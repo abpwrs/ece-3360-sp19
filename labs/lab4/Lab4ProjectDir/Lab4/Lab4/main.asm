@@ -167,7 +167,7 @@ load_command_nibble:
 	nop
 	out PORTC, data_reg
 	nop
-	cbi PORTB, E
+	;cbi PORTB, E
 	rcall lcd_strobe
 	ret
 	
@@ -229,7 +229,7 @@ set_to_8_bit_mode:
 	nop
 	out PORTC, data_reg
 	rcall delay_200_us
-	cbi PORTB, E
+	;cbi PORTB, E
 	nop
 	rcall lcd_strobe
 
@@ -247,7 +247,7 @@ set_to_4_bit_mode:
 	nop
 	out PORTC, data_reg
 	rcall delay_200_us
-	cbi PORTB, E
+	;cbi PORTB, E
 	nop
 	rcall lcd_strobe
 
