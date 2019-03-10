@@ -52,10 +52,10 @@ sbi DDRB, E
 .def duty_reg = r18
 ldi duty_reg, half_duty_cycle
 //
-.equ BOTH_ON = 0x00
+.equ BOTH_ON = 0x03
 .equ A_ON = 0x01
 .equ B_ON = 0x02
-.equ BOTH_OFF = 0x03
+.equ BOTH_OFF = 0x00
 // 0 - both on   0b00000000
 // 1 - clockwise  0b00000001
 // 2 - counter    0b00000010
@@ -111,7 +111,7 @@ out OCR0B, duty_reg ; Set PWM flip point at 100
 
 ; Replace with your application code
 
-
+/*
 rcall lcd_init
 rcall delay_10_ms
 sbi PORTB, RS
@@ -123,27 +123,26 @@ rcall delay_10_ms
 ldi data_reg, 0x01
 rcall load_command_nibble
 rcall delay_10_ms
+*/
 
 ;msg1: .db "DC = ",0x00 
 ;ldi r30,LOW(2*msg1)    ; Load Z register low 
 ;ldi r31,HIGH(2*msg1)   ; Load Z register high
 ;rcall displayCString
+cbi PORTC, led_port
 
 main:
-
-/*	rcall lcd_init
+	/*	
+	rcall lcd_init
 	rcall msg1
+	*/
+
 	rcall read_rpg
 	rcall which_direction
 	out OCR0B, duty_reg
-	rcall delay*/
-	//rcall lcd_init
-	nop
+	rcall delay
 
-	nop
     rjmp main
-
-
 
 displayCString: 
 	lpm r0,Z+               ; <-- first byte 
@@ -257,7 +256,7 @@ read_rpg:
     nop
     push r28
     push r29
-    ldi r28, 0x01e
+    ldi r28, 0x01
     ldi r29, 0x02
 
     mov previous_state, current_state
