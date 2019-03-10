@@ -111,7 +111,7 @@ out OCR0B, duty_reg ; Set PWM flip point at 100
 
 ; Replace with your application code
 
-/*
+
 rcall lcd_init
 rcall delay_10_ms
 sbi PORTB, RS
@@ -123,7 +123,6 @@ rcall delay_10_ms
 ldi data_reg, 0x01
 rcall load_command_nibble
 rcall delay_10_ms
-*/
 
 ;msg1: .db "DC = ",0x00 
 ;ldi r30,LOW(2*msg1)    ; Load Z register low 
