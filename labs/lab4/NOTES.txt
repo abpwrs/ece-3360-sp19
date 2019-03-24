@@ -1,0 +1,44 @@
+Ben and Alex back at it again
+
+Project Requirements:
+-- Variable duty cycle from 1% to 100% in increments <1%
+-- Duty cycle must always have a frequency of 40kHz
+-- RPG input controlling the duty cycle percentage
+-- Program must monitor fan speed and have output dependent on the speed
+-- You must be able to toggle between modes by pressing a button (software debounced)
+-- LCD must show the Duty cycle and Mode status at all times
+
+
+Registers:
+-- 16 -> current_state -> RPG input 
+-- 17 -> previous_state -> RPG input
+-- 18 -> duty_reg -> Control Duty Cycle
+-- 19 -> data_reg -> used to load lcd nibble by nibble 
+
+
+Subroutines:
+
+
+TODOs:
+-> Figure out the LCD
+--- get a character on the first line
+--- implement a lookup table for the strings to be displayed
+----- just get the lookup table to work on the first line
+
+-> Use an interrupt service routine to measure the button push 
+--- Software debounce
+
+-> Logic for the modes of the LCD
+--- Different modes
+---- change register value for threshold based on mode
+---- we need a register to track which mode we are in 
+
+-> Sampling tacrometer signal
+--- interpert the signal
+
+
+-> fix duty cycle
+--- we need to get from 1% to 100% 
+--- we need to have a frequency of 40kHz
+
+
