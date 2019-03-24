@@ -79,6 +79,8 @@ LCDstr: .db 0x33, 0x32, 0x28, 0x01, 0x0c, 0x06
 ldi r30, LOW(2*LCDstr)
 ldi r31, HIGH(2*LCDstr)
 
+rcall lcd_init
+
 rcall delay_10_ms
 sbi PORTB, RS
 rcall delay_10_ms
