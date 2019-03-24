@@ -97,32 +97,37 @@ ldi r31, HIGH(2*LCDstr)
  – Wait at least 5ms 
  – Complete additional device configuration*/
 
-
-
-
 out OCR0B, duty_reg ; Set PWM flip point
 
 ; Replace with your application code
 
-cbi PORTB, RS
 ;rcall displayCString
-rcall lcd_init
+;rcall lcd_init
+
 rcall delay_10_ms
 sbi PORTB, RS
 rcall delay_10_ms
 
 ldi data_reg, 0x04
-rcall load_command_nibble
-rcall delay_10_ms
-ldi data_reg, 0x01
-rcall load_command_nibble
-rcall delay_10_ms
+out PORTC, data_reg
+rcall lcd_strobe
+rcall delay_200_us
 
-;msg1: .db "DC = ",0x00 
-;ldi r29,LOW(2*msg1)    ; Load Z register low 
-;ldi r31,HIGH(2*msg1)   ; Load Z register high
-;rcall displayCString
-cbi PORTC, led_port
+ldi data_reg, 0x02
+out PORTC, data_reg
+rcall lcd_strobe
+rcall delay_200_us
+
+ldi data_reg, 0x04
+out PORTC, data_reg
+rcall lcd_strobe
+rcall delay_200_us
+
+ldi data_reg, 0x03
+out PORTC, data_reg
+rcall lcd_strobe
+rcall delay_200_us
+
 
 main:
 	/*	
@@ -153,17 +158,6 @@ displayCString:
 done: 
 	ret
 
-load_command_nibble:
-	rcall delay_10_ms
-	sbi PORTB, E
-	nop
-	out PORTC, data_reg
-	nop
-	;cbi PORTB, E
-	rcall lcd_strobe
-	ret
-	
-
 lcd_strobe:
 	cbi PORTB, E
 	rcall delay_200_us
@@ -173,76 +167,67 @@ lcd_strobe:
 	ret
 	
 lcd_init:
-	rcall delay_100_ms
-	rcall set_to_8_bit_mode
+	cbi PORTB, RS
 	rcall delay_10_ms
 	rcall set_to_8_bit_mode
-	rcall delay_200_us
 	rcall set_to_8_bit_mode
-	rcall delay_200_us
+	rcall set_to_8_bit_mode
 	rcall set_to_4_bit_mode
+	rcall set_to_4_bit_mode
+
+	ldi data_reg, 0x08 ; Two rows 5x7 characters
+	out PORTC, data_reg
+	rcall lcd_strobe
+	rcall delay_200_us
+
+	ldi data_reg, 0x00 ; clear display
+	out PORTC, data_reg
+	rcall lcd_strobe
+	rcall delay_200_us
+
+	ldi data_reg, 0x01 ; also clear display
+	out PORTC, data_reg
+	rcall lcd_strobe
 	rcall delay_10_ms
 
-	ldi data_reg, 0x02
-	rcall load_command_nibble
+	ldi data_reg, 0x00 ; display on, underline + blink off
+	out PORTC, data_reg
+	rcall lcd_strobe
+	rcall delay_200_us
 
-	ldi data_reg, 0x08
-	rcall load_command_nibble
+	ldi data_reg, 0x0c ; also display on, underline + blink off 
+	out PORTC, data_reg
+	rcall lcd_strobe
+	rcall delay_200_us
 
-	ldi data_reg, 0x00
-	rcall load_command_nibble
+	ldi data_reg, 0x00 ; display shift off, address increment mode
+	out PORTC, data_reg
+	rcall lcd_strobe
+	rcall delay_200_us
 
-	ldi data_reg, 0x01
-	rcall load_command_nibble
-
-	ldi data_reg, 0x00
-	rcall load_command_nibble
-
-	ldi data_reg, 0x0c
-	rcall load_command_nibble
-
-	ldi data_reg, 0x00
-	rcall load_command_nibble
-
-	ldi data_reg, 0x06
-	rcall load_command_nibble
+	ldi data_reg, 0x06 ; also display shift off, address increment mode
+	out PORTC, data_reg
+	rcall lcd_strobe
+	rcall delay_200_us
 
 	ret
 
 set_to_8_bit_mode:
-	rcall delay_10_ms
-	cbi PORTB, RS
-	nop
-	rcall lcd_strobe
-	nop
-	sbi PORTB, E
-	rcall delay_200_us
 	ldi data_reg, 0x03
 	nop
 	out PORTC, data_reg
-	rcall delay_200_us
-	;cbi PORTB, E
-	nop
 	rcall lcd_strobe
-
+	rcall delay_200_us
+	nop
 	ret
 
 set_to_4_bit_mode:
-	rcall delay_10_ms
-	cbi PORTB, RS
-	nop
-	rcall lcd_strobe
-	nop
-	sbi PORTB, E
-	rcall delay_200_us
 	ldi data_reg, 0x02
 	nop
 	out PORTC, data_reg
-	rcall delay_200_us
-	;cbi PORTB, E
-	nop
 	rcall lcd_strobe
-
+	rcall delay_200_us
+	nop
 	ret
 
 read_rpg:
