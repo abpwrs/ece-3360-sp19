@@ -45,9 +45,9 @@ sbi DDRB, E
 .def current_state = r16
 .def previous_state = r17
 .def duty_reg = r18
-.equ upper_cycle_limit = 254
+.equ upper_cycle_limit = 201
 .equ lower_cycle_limit = 1
-.equ half_duty_cycle = 154
+.equ half_duty_cycle = 60
 ldi duty_reg, half_duty_cycle
 
 .equ BOTH_ON = 0x03
@@ -67,25 +67,61 @@ ldi duty_reg, half_duty_cycle
 push r29
 ldi r29, 0x23 // 0 0 1 0 0 0 1 1 (Compare to non invert + mode to 7)
 out TCCR0A, r29
-ldi r29, 0x01 // 0 0 0 0 0 0 0 1 (mode to 7 + prescale of 1)
+ldi r29, 0x09 // 0 0 0 0 1 0 0 1 (mode to 7 + prescale of 1)
 out TCCR0B, r29
-pop r29
-out OCR0B, duty_reg ; Set PWM flip point, OCR0B is the pwm active reg
 
-// LCDstr
+ldi r29, 201
+out OCR0A, r29
+
+out OCR0B, duty_reg ; Set PWM flip point, OCR0B is the pwm active reg
+pop r29
+
+// Tables
 //////////////////////////////////////////////////////////////////////
-LCDstr: .db 0x33, 0x32, 0x28, 0x01, 0x0c, 0x06
+LCDInit: .db 0x33, 0x32, 0x28, 0x01, 0x0c, 0x06
+msg_dc: .db "DC = ____%      "
+msg_a: .db "Mode A: ____" 
 //////////////////////////////////////////////////////////////////////
-ldi r30, LOW(2*LCDstr)
-ldi r31, HIGH(2*LCDstr)
 
 rcall lcd_init
 
+// Switch to data mode to enter line 1
 rcall delay_10_ms
 sbi PORTB, RS
 rcall delay_10_ms
 
-ldi data_reg, 0x04
+// Set z to the dc message
+ldi r30, LOW(2*msg_dc)
+ldi r31, HIGH(2*msg_dc)
+rcall displayCString
+
+// Switch to command mode to move to line 2
+rcall delay_10_ms
+cbi PORTB, RS
+rcall delay_10_ms
+
+// change display address to line 2
+ldi data_reg, 0x0C
+out PORTC, data_reg
+rcall lcd_strobe
+rcall delay_200_us
+ldi data_reg, 0x00
+out PORTC, data_reg
+rcall lcd_strobe
+rcall delay_10_ms
+
+// Switch to data mode to enter line 2
+rcall delay_10_ms
+sbi PORTB, RS
+rcall delay_10_ms
+
+// Set z to the mode a message
+ldi r30, LOW(2*msg_a)
+ldi r31, HIGH(2*msg_a)
+rcall displayCString
+
+// Loading in A and B
+/*ldi data_reg, 0x04
 out PORTC, data_reg
 rcall lcd_strobe
 rcall delay_200_us
@@ -93,22 +129,11 @@ rcall delay_200_us
 ldi data_reg, 0x02
 out PORTC, data_reg
 rcall lcd_strobe
-rcall delay_200_us
-
-ldi data_reg, 0x04
-out PORTC, data_reg
-rcall lcd_strobe
-rcall delay_200_us
-
-ldi data_reg, 0x03
-out PORTC, data_reg
-rcall lcd_strobe
-rcall delay_200_us
+rcall delay_200_us*/
 
 main:
 	rcall read_rpg
 	rcall which_direction
-	out OCR0B, duty_reg
 	rcall delay
     rjmp main
 
@@ -342,6 +367,7 @@ clockwise:
     recover_upper:
     ldi duty_reg, upper_cycle_limit
     end_cwise:
+	out OCR0B, duty_reg
     ret
 
 counter_clockwise:
@@ -350,6 +376,7 @@ counter_clockwise:
     brsh end_ccwise
     ldi duty_reg, lower_cycle_limit
     end_ccwise:
+	out OCR0B, duty_reg
     ret
 
 //////////////////////////////////////////////////////////////////////
