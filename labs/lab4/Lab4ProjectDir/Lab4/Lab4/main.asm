@@ -46,10 +46,10 @@ sbi DDRB, E
 ////////////////////////////////////////////////////////////////////////////////
 .def current_state = r16
 .def previous_state = r17
-.equ upper_cycle_limit = 254
-.equ lower_cycle_limit = 54
-.equ half_duty_cycle = 154
 .def duty_reg = r18
+.equ upper_cycle_limit = 254
+.equ lower_cycle_limit = 106
+.equ half_duty_cycle = 154
 ldi duty_reg, half_duty_cycle
 //
 .equ BOTH_ON = 0x03
@@ -67,27 +67,20 @@ ldi duty_reg, half_duty_cycle
 
 // configure PWM
 //////////////////////////////////////////////////////////////////////
-push r30
-ldi r30, 0x23 // 0 0 1 0 0 0 1 1 (Compare to non invert + mode to 7)
-out TCCR0A, r30
-ldi r30, 0x09 // 0 0 0 0 1 0 0 1 (mode to 7 + prescale of 1)
-out TCCR0B, r30
-pop r30
+push r29
+ldi r29, 0x23 // 0 0 1 0 0 0 1 1 (Compare to non invert + mode to 7)
+out TCCR0A, r29
+ldi r29, 0x01 // 0 0 0 0 0 0 0 1 (mode to 7 + prescale of 1)
+out TCCR0B, r29
+pop r29
 // OCR0B is the pwm active reg 
-
-// configure delay registers
-//////////////////////////////////////////////////////////////////////
-.def tmp1 = r21
-.def tmp2 = r22
-//////////////////////////////////////////////////////////////////////
-
 
 // LCDstr
 //////////////////////////////////////////////////////////////////////
-;LCDstr: .db 0x33, 0x32, 0x28, 0x01, 0x0c, 0x06
+LCDstr: .db 0x33, 0x32, 0x28, 0x01, 0x0c, 0x06
 //////////////////////////////////////////////////////////////////////
-
-
+ldi r30, LOW(2*LCDstr)
+ldi r31, HIGH(2*LCDstr)
 
  /* steps from notes for initializing LCD
  switch to command mode using RS to 0 // instruction is 0 and data input is 1
@@ -107,11 +100,12 @@ pop r30
 
 
 
-out OCR0B, duty_reg ; Set PWM flip point at 100 
+out OCR0B, duty_reg ; Set PWM flip point
 
 ; Replace with your application code
 
-
+cbi PORTB, RS
+;rcall displayCString
 rcall lcd_init
 rcall delay_10_ms
 sbi PORTB, RS
@@ -125,7 +119,7 @@ rcall load_command_nibble
 rcall delay_10_ms
 
 ;msg1: .db "DC = ",0x00 
-;ldi r30,LOW(2*msg1)    ; Load Z register low 
+;ldi r29,LOW(2*msg1)    ; Load Z register low 
 ;ldi r31,HIGH(2*msg1)   ; Load Z register high
 ;rcall displayCString
 cbi PORTC, led_port
@@ -311,29 +305,33 @@ counter_clockwise:
     ret
 
 delay:
-    ; Stop timer 0
-    in tmp1, TCCR0B
-    ldi tmp2, 0x00
-    out TCCR0B, tmp2
+	push r21
+	push r20
 
-    ; Clear over flow flag
-    in tmp2, TIFR0
-    sbr tmp2, 1<<TOV0
-    out TIFR0, tmp2
+    // Stop timer 0
+    in r20, TCCR0B //
+    ldi r21, 0x00
+    out TCCR0B, r21
 
-    ; Start timer with new initial count
-	push r30
-	ldi r30, 0x37
-    out TCNT0, r30
-    out TCCR0B, tmp1
-	pop r30
+    // Clear over flow flag
+    in r21, TIFR0
+    sbr r21, 1<<TOV0
+    out TIFR0, r21
 
-; wait
-wait:
-    in tmp2, TIFR0
-    sbrs tmp2, TOV0
+    // Start timer with new initial count
+	push r29
+	ldi r29, 0x69
+    out TCNT0, r29 // starting point of timer
+    out TCCR0B, r20
+
+	pop r29
+	pop r20
+	
+wait: // check the timer overflow bit
+    in r21, TIFR0
+    sbrs r21, TOV0
     rjmp wait
-
+	pop r21
     ret
 
 // 100ms, 10ms, and 200us delays for LCD initialization
