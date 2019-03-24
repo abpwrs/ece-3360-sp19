@@ -29,8 +29,6 @@
 .equ D7 = 3
 .def data_reg = r19
 
-//////////////////////////////////////////////////////////////////////
-
 // set DDRB/C
 //////////////////////////////////////////////////////////////////////
 sbi DDRC, led_port
@@ -48,10 +46,10 @@ sbi DDRB, E
 .def previous_state = r17
 .def duty_reg = r18
 .equ upper_cycle_limit = 254
-.equ lower_cycle_limit = 106
+.equ lower_cycle_limit = 1
 .equ half_duty_cycle = 154
 ldi duty_reg, half_duty_cycle
-//
+
 .equ BOTH_ON = 0x03
 .equ A_ON = 0x01
 .equ B_ON = 0x02
@@ -64,7 +62,6 @@ ldi duty_reg, half_duty_cycle
 // B is bit position 0
 ////////////////////////////////////////////////////////////////////////////////
 
-
 // configure PWM
 //////////////////////////////////////////////////////////////////////
 push r29
@@ -73,7 +70,7 @@ out TCCR0A, r29
 ldi r29, 0x01 // 0 0 0 0 0 0 0 1 (mode to 7 + prescale of 1)
 out TCCR0B, r29
 pop r29
-// OCR0B is the pwm active reg 
+out OCR0B, duty_reg ; Set PWM flip point, OCR0B is the pwm active reg
 
 // LCDstr
 //////////////////////////////////////////////////////////////////////
@@ -81,28 +78,6 @@ LCDstr: .db 0x33, 0x32, 0x28, 0x01, 0x0c, 0x06
 //////////////////////////////////////////////////////////////////////
 ldi r30, LOW(2*LCDstr)
 ldi r31, HIGH(2*LCDstr)
-
- /* steps from notes for initializing LCD
- switch to command mode using RS to 0 // instruction is 0 and data input is 1
- pull read write low // o is write and 1 is read
-
- - Wait for 100 ms 
- – Set the device to 8-bit mode 
- – Wait 5 ms 
- – Set the device to 8-bit mode 
- – Wait at least 	
- – Set the device to 8-bit mode 
- – Wait at least 	
- – Set device to 4-bit mode 
- – Wait at least 5ms 
- – Complete additional device configuration*/
-
-out OCR0B, duty_reg ; Set PWM flip point
-
-; Replace with your application code
-
-;rcall displayCString
-;rcall lcd_init
 
 rcall delay_10_ms
 sbi PORTB, RS
@@ -128,18 +103,11 @@ out PORTC, data_reg
 rcall lcd_strobe
 rcall delay_200_us
 
-
 main:
-	/*	
-	rcall lcd_init
-	rcall msg1
-	*/
-
 	rcall read_rpg
 	rcall which_direction
 	out OCR0B, duty_reg
 	rcall delay
-
     rjmp main
 
 displayCString: 
@@ -230,69 +198,11 @@ set_to_4_bit_mode:
 	nop
 	ret
 
-read_rpg:
-    nop
-    push r28
-    push r29
-    ldi r28, 0x01
-    ldi r29, 0x02
-
-    mov previous_state, current_state
-    ldi current_state, 0x00
-    sbis PIND, 0
-    add current_state, r29 ; run if a is high
-    sbis PIND, 1
-    add current_state, r28 ; run if b is high
-    pop r29
-    pop r28
-    ret
-
-
-which_direction:
-    nop
-    cpi previous_state, BOTH_ON
-    breq which_end
-
-    // if current state low
-    cpi current_state, BOTH_OFF
-    breq current_low
-    rjmp which_end
-
-    current_low:
-    cpi previous_state, A_ON
-    breq counter_clockwise
-    cpi previous_state, B_ON
-    breq clockwise
-    rjmp which_end
-
-    which_end:
-    ret
-
-
-// clockwise
-clockwise:
-    inc duty_reg
-    cpi duty_reg, upper_cycle_limit
-    brsh recover_upper
-    rjmp end_cwise
-    recover_upper:
-    ldi duty_reg, upper_cycle_limit
-    end_cwise:
-    ret
-
-// counter_clockwise
-counter_clockwise:
-    dec duty_reg
-    cpi duty_reg, lower_cycle_limit
-    brsh end_ccwise
-    ldi duty_reg, lower_cycle_limit
-    end_ccwise:
-    ret
-
+// Delaying for PWM
+//////////////////////////////////////////////////////////////////////
 delay:
 	push r21
 	push r20
-
     // Stop timer 0
     in r20, TCCR0B //
     ldi r21, 0x00
@@ -305,10 +215,9 @@ delay:
 
     // Start timer with new initial count
 	push r29
-	ldi r29, 0x69
+	ldi r29, 0x00
     out TCNT0, r29 // starting point of timer
     out TCCR0B, r20
-
 	pop r29
 	pop r20
 	
@@ -384,6 +293,62 @@ delay_200_us:
 	  pop r23
       ret
 
+// RPG sub-routines
+//////////////////////////////////////////////////////////////////////
+read_rpg:
+    nop
+    push r28
+    push r29
+    ldi r28, 0x01
+    ldi r29, 0x02
+
+    mov previous_state, current_state
+    ldi current_state, 0x00
+    sbis PIND, 0
+    add current_state, r29 ; run if a is high
+    sbis PIND, 1
+    add current_state, r28 ; run if b is high
+    pop r29
+    pop r28
+    ret
+
+which_direction:
+    nop
+    cpi previous_state, BOTH_ON
+    breq which_end
+
+    // if current state low
+    cpi current_state, BOTH_OFF
+    breq current_low
+    rjmp which_end
+
+    current_low:
+    cpi previous_state, A_ON
+    breq counter_clockwise
+    cpi previous_state, B_ON
+    breq clockwise
+    rjmp which_end
+
+    which_end:
+    ret
+
+clockwise:
+    inc duty_reg
+    cpi duty_reg, upper_cycle_limit
+    brsh recover_upper
+    rjmp end_cwise
+    recover_upper:
+    ldi duty_reg, upper_cycle_limit
+    end_cwise:
+    ret
+
+counter_clockwise:
+    dec duty_reg
+    cpi duty_reg, lower_cycle_limit
+    brsh end_ccwise
+    ldi duty_reg, lower_cycle_limit
+    end_ccwise:
+    ret
+
 //////////////////////////////////////////////////////////////////////
 .exit
-
