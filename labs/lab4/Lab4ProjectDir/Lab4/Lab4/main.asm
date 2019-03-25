@@ -47,7 +47,7 @@ sbi DDRB, E
 .def duty_reg = r18
 .equ upper_cycle_limit = 201
 .equ lower_cycle_limit = 1
-.equ half_duty_cycle = 61
+.equ half_duty_cycle = 128
 ldi duty_reg, half_duty_cycle
 
 .equ BOTH_ON = 0x03
@@ -83,9 +83,9 @@ pop r29
 // Tables
 //////////////////////////////////////////////////////////////////////
 rjmp table_skip
-msg_dc: .db "DC =      %", 0x00
-msg_0: .db "  0.0", 0x00
-msg_100: .db "100.0", 0x00
+msg_dc: .db  "DC =      %", 0x00
+msg_0: .db   "DC =   0.0%", 0x00
+msg_100: .db "DC = 100.0%", 0x00
 msg_a: .db "Mode A:", 0x00
 msg_b: .db "Mode B:", 0x00
 
@@ -115,11 +115,11 @@ ldi R31, HIGH(2*active)
 sbi PORTB, RS
 rcall displayCString*/
 
-/*ldi R30, LOW(2*msg_dc)
+ldi R30, LOW(2*msg_dc)
 ldi R31, HIGH(2*msg_dc)
 sbi PORTB, RS
 rcall displayCString
-
+/*
 cbi PORTB, 5;
 ldi data_reg, 0x0C
 out PORTC, data_reg
@@ -141,7 +141,7 @@ main:
 	rcall which_direction // 16, 17, 18
 	rcall delay
 
-	rcall display_home
+	
 	// Fan Signal to display mode result: 19 - 29 available
 	// push regs
 	// call stuff
@@ -186,11 +186,49 @@ display_home:
 	ldi data_reg, 0x00
 	out PORTC, data_reg
 	rcall lcd_strobe
-	rcall delay_10_ms
+	rcall delay_200_us
 	ret
 
+move_to_5_pos:
+	cbi PORTB, 5;
+	ldi data_reg, 0x08
+	out PORTC, data_reg
+	rcall lcd_strobe
+	rcall delay_200_us
+	ldi data_reg, 0x05
+	out PORTC, data_reg
+	rcall lcd_strobe
+	rcall delay_200_us
+	ret
+
+
+duty_edge_cases:
+	cpi duty_reg, 0xC8
+	brsh duty_hundo
+	cpi duty_reg, 0x02
+	brlo duty_zero
+	rjmp no_edge_return
+
+
+duty_hundo:
+	rcall display_home
+	ldi R30, LOW(2*msg_100)
+	ldi R31, HIGH(2*msg_100)
+	rcall displayCString
+	rjmp duty_display_end
+
+duty_zero:
+	rcall display_home
+	ldi R30, LOW(2*msg_0)
+	ldi R31, HIGH(2*msg_0)
+	rcall displayCString
+	rjmp duty_display_end
+
 update_duty_display:
-    push r25
+	rjmp duty_edge_cases
+no_edge_return:	
+    rcall move_to_5_pos	
+	push r25
     push r26
 
 	// duty_reg / 201 --> percentage as 0.xxx
@@ -266,7 +304,7 @@ update_duty_display:
 
 	pop r26
 	pop r25
-
+duty_display_end:
 	ret
 
 
