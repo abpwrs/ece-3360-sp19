@@ -62,6 +62,10 @@ ldi duty_reg, half_duty_cycle
 // B is bit position 0
 ////////////////////////////////////////////////////////////////////////////////
 
+// Registers for displayDC
+//////////////////////////////////////////////////////////////////////
+
+
 // configure PWM
 //////////////////////////////////////////////////////////////////////
 push r29
@@ -78,13 +82,37 @@ pop r29
 
 // Tables
 //////////////////////////////////////////////////////////////////////
-LCDInit: .db 0x33, 0x32, 0x28, 0x01, 0x0c, 0x06
 msg_dc: .db "DC =      %", 0x00
-msg_a: .db "Mode D:", 0x00
+msg_0: .db "  0.0", 0x00
+msg_100: .db "100.0", 0x00
+msg_a: .db "Mode A:", 0x00
+msg_b: .db "Mode B:", 0x00
 
+.dseg
+	active: .BYTE 5
+
+.cseg
+
+push data_reg
 rcall lcd_init
+pop data_reg
 
-ldi R30, LOW(2*msg_dc)
+push r25
+push r26
+ldi r25,low(755)
+ldi r26,high(755)
+rcall displayDC
+rcall displayDString
+pop r26
+pop r25
+
+; 30 and 31 are always Z
+/*ldi R30, LOW(2*active)
+ldi R31, HIGH(2*active)
+sbi PORTB, RS
+rcall displayCString*/
+
+/*ldi R30, LOW(2*msg_dc)
 ldi R31, HIGH(2*msg_dc)
 sbi PORTB, RS
 rcall displayCString
@@ -102,18 +130,50 @@ rcall delay_200_us
 sbi PORTB, 5
 ldi r30, LOW(2*msg_a)
 ldi r31, HIGH(2*msg_a)
-rcall displayCString
+rcall displayCString*/
 
 main:
-	rcall read_rpg
-	rcall which_direction
+	// RPG Sub-Methods 
+	rcall read_rpg // Uses 16, 17
+	rcall which_direction // 16, 17, 18
 	rcall delay
+
+	// Fan Signal to display mode result: 19 - 29 available
+	// push regs
+	// call stuff
+	// pop regs
+
+	// Fill in duty cycle %:  19 - 29 available
+	// push registers
+	push r14
+	push r15
+	push r16
+	push r17
+	push r18
+	push r19
+	push r20
+
+	// TODO: prep 25 and 26 for displayDC
+	// Call displayDC
+	// Call displayDstring
+
+	// pop registers
+	pop r20
+	pop r19
+	pop r18
+	pop r17
+	pop r16
+	pop r15
+	pop r14
+
+
 	rjmp main
 
-displayCString:
+displayCString:             ; Prints whatever is in Z
+	sbi PORTB, RS
 	lpm r0,Z+               ; <-- first byte 
 	tst r0                  ; Reached end of message ? 
-	breq done               ; Yes => quit 
+	breq doneC               ; Yes => quit 
 	swap  r0                ; Upper nibble in place 
 	out   PORTC,r0          ; Send upper nibble out 
 	rcall lcd_strobe         ; Latch nibble 	
@@ -123,7 +183,64 @@ displayCString:
 	rcall lcd_strobe         ; Latch nibble 
 	rcall delay_10_ms
 	rjmp displayCstring 
-done: 
+doneC: 
+	ret
+
+displayDC:             ; Converts 3 digits in r25 r26 to active
+	
+	push r21
+
+	mov dd16uL,r25     ; LSB of number to display
+	mov dd16uH,r26     ; MSB of number to display  
+	ldi dv16uL,low(10) 
+	ldi dv16uH,high(10)
+
+	; Store terminating for the string. 
+	ldi r20,0x00       ; Terminating NULL     
+	sts active+4,r20     ; Store in RAM
+
+	; Divide the number by 10 and format remainder. 
+	rcall div16u       ; Result: r17:r16, rem: r15:r14 
+	ldi r20,0x30 
+	add r14,r20      ; Convert to ASCII 
+	sts active+3,r14     ; Store in RAM
+	
+	; Generate decimal point. 
+	ldi r20,0x2e       ; ASCII code for . 
+	sts active+2,r20     ; Store in RAM
+
+	mov dd16uL, r16 
+	mov dd16uH, r17
+	rcall div16u
+
+	ldi r20,0x30
+	add r14, r20
+	sts active+1,r14
+
+	ldi r20,0x30
+	add r16, r20
+	sts active+0,r16
+
+	pop r21
+	ret
+
+displayDString:             ; Prints whatever is in Z
+	sbi PORTB, RS
+	ldi r30, LOW(active)
+	ldi r31, high(active)
+	lpm r0,Z+               ; <-- first byte 
+	tst r0                  ; Reached end of message ? 
+	breq doneD               ; Yes => quit 
+	swap  r0                ; Upper nibble in place 
+	out   PORTC,r0          ; Send upper nibble out 
+	rcall lcd_strobe         ; Latch nibble 	
+	rcall delay_10_ms
+	swap  r0                ; Lower nibble in place 
+	out   PORTC,r0          ; Send lower nibble out 
+	rcall lcd_strobe         ; Latch nibble 
+	rcall delay_10_ms
+	rjmp displayDString 
+doneD: 
 	ret
 
 lcd_strobe:
@@ -350,6 +467,57 @@ counter_clockwise:
     end_ccwise:
 	out OCR0B, duty_reg
     ret
-
 //////////////////////////////////////////////////////////////////////
+
+;***************************************************************************
+;*
+;* "div16u" - 16/16 Bit Unsigned Division
+;*
+;* This subroutine divides the two 16-bit numbers 
+;* "dd8uH:dd8uL" (dividend) and "dv16uH:dv16uL" (divisor). 
+;* The result is placed in "dres16uH:dres16uL" and the remainder in
+;* "drem16uH:drem16uL".
+;*  
+;* Number of words	:19
+;* Number of cycles	:235/251 (Min/Max)
+;* Low registers used	:2 (drem16uL,drem16uH)
+;* High registers used  :5 (dres16uL/dd16uL,dres16uH/dd16uH,dv16uL,dv16uH,
+;*			    dcnt16u)
+;*
+;***************************************************************************
+
+;***** Subroutine Register Variables
+
+.def	drem16uL=r14
+.def	drem16uH=r15
+.def	dres16uL=r16
+.def	dres16uH=r17
+.def	dd16uL	=r16
+.def	dd16uH	=r17
+.def	dv16uL	=r18
+.def	dv16uH	=r19
+.def	dcnt16u	=r20
+
+;***** Code
+
+div16u:	clr	drem16uL	;clear remainder Low byte
+	sub	drem16uH,drem16uH;clear remainder High byte and carry
+	ldi	dcnt16u,17	;init loop counter
+d16u_1:	rol	dd16uL		;shift left dividend
+	rol	dd16uH
+	dec	dcnt16u		;decrement counter
+	brne	d16u_2		;if done
+	ret			;    return
+d16u_2:	rol	drem16uL	;shift dividend into remainder
+	rol	drem16uH
+	sub	drem16uL,dv16uL	;remainder = remainder - divisor
+	sbc	drem16uH,dv16uH	;
+	brcc	d16u_3		;if result negative
+	add	drem16uL,dv16uL	;    restore remainder
+	adc	drem16uH,dv16uH
+	clc			;    clear carry to be shifted into result
+	rjmp	d16u_1		;else
+d16u_3:	sec			;    set carry to be shifted into result
+	rjmp	d16u_1
+
 .exit

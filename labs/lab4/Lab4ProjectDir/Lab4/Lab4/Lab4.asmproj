@@ -97,6 +97,12 @@
     </ToolchainSettings>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="avr200.asm">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="avr200b.asm">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="main.asm">
       <SubType>Code</SubType>
     </Compile>
