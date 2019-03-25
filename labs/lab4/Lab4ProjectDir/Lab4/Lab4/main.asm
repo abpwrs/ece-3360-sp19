@@ -79,28 +79,17 @@ pop r29
 // Tables
 //////////////////////////////////////////////////////////////////////
 LCDInit: .db 0x33, 0x32, 0x28, 0x01, 0x0c, 0x06
-msg_dc: .db "DC = ____%      "
-msg_a: .db "Mode A: ____" 
-//////////////////////////////////////////////////////////////////////
+msg_dc: .db "DC =      %", 0x00
+msg_a: .db "Mode D:", 0x00
 
 rcall lcd_init
 
-// Switch to data mode to enter line 1
-rcall delay_10_ms
+ldi R30, LOW(2*msg_dc)
+ldi R31, HIGH(2*msg_dc)
 sbi PORTB, RS
-rcall delay_10_ms
-
-// Set z to the dc message
-ldi r30, LOW(2*msg_dc)
-ldi r31, HIGH(2*msg_dc)
 rcall displayCString
 
-// Switch to command mode to move to line 2
-rcall delay_10_ms
-cbi PORTB, RS
-rcall delay_10_ms
-
-// change display address to line 2
+cbi PORTB, 5;
 ldi data_reg, 0x0C
 out PORTC, data_reg
 rcall lcd_strobe
@@ -108,14 +97,9 @@ rcall delay_200_us
 ldi data_reg, 0x00
 out PORTC, data_reg
 rcall lcd_strobe
-rcall delay_10_ms
+rcall delay_200_us
 
-// Switch to data mode to enter line 2
-rcall delay_10_ms
-sbi PORTB, RS
-rcall delay_10_ms
-
-// Set z to the mode a message
+sbi PORTB, 5
 ldi r30, LOW(2*msg_a)
 ldi r31, HIGH(2*msg_a)
 rcall displayCString
@@ -135,9 +119,9 @@ main:
 	rcall read_rpg
 	rcall which_direction
 	rcall delay
-    rjmp main
+	rjmp main
 
-displayCString: 
+displayCString:
 	lpm r0,Z+               ; <-- first byte 
 	tst r0                  ; Reached end of message ? 
 	breq done               ; Yes => quit 
@@ -160,7 +144,7 @@ lcd_strobe:
 	rcall delay_200_us
 	cbi PORTB, E
 	ret
-	
+
 lcd_init:
 	cbi PORTB, RS
 	rcall delay_10_ms
@@ -204,7 +188,7 @@ lcd_init:
 	out PORTC, data_reg
 	rcall lcd_strobe
 	rcall delay_200_us
-
+	
 	ret
 
 set_to_8_bit_mode:
@@ -319,7 +303,6 @@ delay_200_us:
 	  pop r24
 	  pop r23
       ret
-
 // RPG sub-routines
 //////////////////////////////////////////////////////////////////////
 read_rpg:

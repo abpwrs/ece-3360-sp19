@@ -29,35 +29,30 @@ sbi DDRB, E
 // Tables
 //////////////////////////////////////////////////////////////////////
 LCDInit: .db 0x33, 0x32, 0x28, 0x01, 0x0c, 0x06
-msg_dc: .db "DC = ____%      "
-msg_a: .db "Mode A: ____" 
-
-// String Tables
-//////////////////////////////////////////////////////////////////////
-dc: .db "DC =      %", 0x00
-a_char: .db "Mode A:", 0x00
+msg_dc: .db "DC =      %", 0x00
+msg_a: .db "Mode A:", 0x00
 
 rcall lcd_init
 
-ldi R30, LOW(2*dc)
-ldi R31, HIGH(2*dc)
+ldi R30, LOW(2*msg_dc)
+ldi R31, HIGH(2*msg_dc)
 sbi PORTB, RS
 rcall displayCString 
 // Only difference is ours has extra delays
 
 cbi PORTB, 5;
-ldi r16, 0x0C
-out PORTC, r16
+ldi r19, 0x0C
+out PORTC, r19
 rcall lcd_strobe
 rcall delay_200_us
-ldi r16, 0x00
-out PORTC, r16
+ldi r19, 0x00
+out PORTC, r19
 rcall lcd_strobe
 rcall delay_200_us
 
 sbi PORTB, 5
-ldi r30, LOW(2*a_char)
-ldi r31, HIGH(2*a_char)
+ldi r30, LOW(2*msg_a)
+ldi r31, HIGH(2*msg_a)
 rcall displayCString
 
 main:
