@@ -100,9 +100,6 @@
     <Compile Include="main.asm">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="MainBackup.asm">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="TwoLineTest.asm">
       <SubType>Code</SubType>
     </Compile>
