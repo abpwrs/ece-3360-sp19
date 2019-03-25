@@ -227,19 +227,20 @@ displayDC:             ; Converts 3 digits in r25 r26 to active
 displayDString:             ; Prints whatever is in Z
 	sbi PORTB, RS
 	ldi r30, LOW(active)
-	ldi r31, high(active)
-	lpm r0,Z+               ; <-- first byte 
+	ldi r31, HIGH(active)
+progressDString:
+	ld r0,Z+               ; <-- first byte 
 	tst r0                  ; Reached end of message ? 
 	breq doneD               ; Yes => quit 
 	swap  r0                ; Upper nibble in place 
 	out   PORTC,r0          ; Send upper nibble out 
 	rcall lcd_strobe         ; Latch nibble 	
-	rcall delay_10_ms
+	;rcall delay_10_ms
 	swap  r0                ; Lower nibble in place 
 	out   PORTC,r0          ; Send lower nibble out 
 	rcall lcd_strobe         ; Latch nibble 
-	rcall delay_10_ms
-	rjmp displayDString 
+	;rcall delay_10_ms
+	rjmp progressDString 
 doneD: 
 	ret
 
