@@ -141,7 +141,7 @@ main:
 	rcall which_direction // 16, 17, 18
 	rcall delay
 
-	//rcall display_home
+	rcall display_home
 	// Fan Signal to display mode result: 19 - 29 available
 	// push regs
 	// call stuff
@@ -159,11 +159,8 @@ main:
 	push r21
 	push r22
 	push r23
-	// TODO: prep 25 and 26 for displayDC
-	// Call displayDC
-	// Call displayDstring
 	
-	//rcall update_duty_display // preps 25 and 26 for display and displays DC = xx.x%
+	rcall update_duty_display // preps 25 and 26 for display and displays DC = xx.x%
 
 	// pop registers
 	pop r23
@@ -253,6 +250,8 @@ update_duty_display:
 
 	mov dd16uL, r16 
 	mov dd16uH, r17
+	ldi dv16uL, low(10) 
+	ldi dv16uH, high(10)
 	rcall div16u
 
 	ldi r20,0x30
