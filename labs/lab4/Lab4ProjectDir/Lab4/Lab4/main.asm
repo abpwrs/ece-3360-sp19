@@ -47,7 +47,7 @@ sbi DDRB, E
 .def duty_reg = r18
 .equ upper_cycle_limit = 201
 .equ lower_cycle_limit = 1
-.equ half_duty_cycle = 60
+.equ half_duty_cycle = 61
 ldi duty_reg, half_duty_cycle
 
 .equ BOTH_ON = 0x03
@@ -82,11 +82,14 @@ pop r29
 
 // Tables
 //////////////////////////////////////////////////////////////////////
+rjmp table_skip
 msg_dc: .db "DC =      %", 0x00
 msg_0: .db "  0.0", 0x00
 msg_100: .db "100.0", 0x00
 msg_a: .db "Mode A:", 0x00
 msg_b: .db "Mode B:", 0x00
+
+table_skip:
 
 .dseg
 	active: .BYTE 5
@@ -97,14 +100,14 @@ push data_reg
 rcall lcd_init
 pop data_reg
 
-push r25
+/*push r25
 push r26
-ldi r25,low(755)
-ldi r26,high(755)
+ldi r25,low(699)
+ldi r26,high(699)
 rcall displayDC
 rcall displayDString
 pop r26
-pop r25
+pop r25*/
 
 ; 30 and 31 are always Z
 /*ldi R30, LOW(2*active)
@@ -138,6 +141,7 @@ main:
 	rcall which_direction // 16, 17, 18
 	rcall delay
 
+	//rcall display_home
 	// Fan Signal to display mode result: 19 - 29 available
 	// push regs
 	// call stuff
@@ -149,18 +153,25 @@ main:
 	push r15
 	push r16
 	push r17
-	push r18
+	//push r18
 	push r19
 	push r20
-
+	push r21
+	push r22
+	push r23
 	// TODO: prep 25 and 26 for displayDC
 	// Call displayDC
 	// Call displayDstring
+	
+	//rcall update_duty_display // preps 25 and 26 for display and displays DC = xx.x%
 
 	// pop registers
+	pop r23
+	pop r22
+	pop r21
 	pop r20
 	pop r19
-	pop r18
+	//pop r18
 	pop r17
 	pop r16
 	pop r15
@@ -168,6 +179,100 @@ main:
 
 
 	rjmp main
+
+display_home:
+	cbi PORTB, 5;
+	ldi data_reg, 0x08
+	out PORTC, data_reg
+	rcall lcd_strobe
+	rcall delay_200_us
+	ldi data_reg, 0x00
+	out PORTC, data_reg
+	rcall lcd_strobe
+	rcall delay_10_ms
+	ret
+
+update_duty_display:
+    push r25
+    push r26
+
+	// duty_reg / 201 --> percentage as 0.xxx
+	// take above and mult by 1000 to get valid percentage
+
+/*	
+.def	mc16uL	=r16		;multiplicand low byte
+.def	mc16uH	=r17		;multiplicand high byte
+.def	mp16uL	=r23		;multiplier low byte
+.def	mp16uH	=r19		;multiplier high byte
+.def	m16u0	=r23		;result byte 0 (LSB)
+.def	m16u1	=r19		;result byte 1
+.def	m16u2	=r20		;result byte 2
+.def	m16u3	=r21		;result byte 3 (MSB)
+.def	mcnt16u	=r22		;loop counter
+*/
+/*
+.def	drem16uL=r14
+.def	drem16uH=r15
+.def	dres16uL=r16
+.def	dres16uH=r17
+.def	dd16uL	=r16
+.def	dd16uH	=r17
+.def	dv16uL	=r23
+.def	dv16uH	=r19
+.def	dcnt16u	=r20
+*/
+	// ex: 61
+    // divide duty reg by 2
+	mov dd16uL, duty_reg     ; LSB of number to display
+	ldi r26, 0x00
+	mov dd16uH, r26     ; MSB of number to display  
+	ldi dv16uL, low(2) 
+	ldi dv16uH, high(2)
+	rcall div16u
+
+	; Store terminating for the string. 
+	ldi r20,0x00       ; Terminating NULL     
+	sts active+4,r20     ; Store in RAM
+
+	// r16 now has 30
+	// r14 now has 1 or 0
+	mov r26, r14
+	cpi r26, 0x00
+	breq zero_dec
+	ldi r25, 0x35
+	sts active+3,r25
+	rjmp end_dec
+	zero_dec:
+	ldi r25, 0x30
+	sts active+3,r25
+	end_dec:
+
+	; Generate decimal point. 
+	ldi r20,0x2e       ; ASCII code for . 
+	sts active+2,r20     ; Store in RAM
+
+	mov dd16uL, r16 
+	mov dd16uH, r17
+	rcall div16u
+
+	ldi r20,0x30
+	add r14, r20
+	sts active+1,r14
+
+	ldi r20,0x30
+	add r16, r20
+	sts active+0,r16
+
+	rcall displayDString
+
+	pop r26
+	pop r25
+
+	ret
+
+
+
+
 
 displayCString:             ; Prints whatever is in Z
 	sbi PORTB, RS
@@ -495,7 +600,7 @@ counter_clockwise:
 .def	dres16uH=r17
 .def	dd16uL	=r16
 .def	dd16uH	=r17
-.def	dv16uL	=r18
+.def	dv16uL	=r23
 .def	dv16uH	=r19
 .def	dcnt16u	=r20
 
