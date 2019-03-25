@@ -20,11 +20,6 @@ Subroutines:
 
 
 TODOs:
--> Figure out the LCD
---- get a character on the first line
---- implement a lookup table for the strings to be displayed
------ just get the lookup table to work on the first line
-
 -> Use an interrupt service routine to measure the button push 
 --- Software debounce
 
@@ -35,10 +30,11 @@ TODOs:
 
 -> Sampling tacrometer signal
 --- interpert the signal
+--- display signal
 
 
 -> fix duty cycle
 --- we need to get from 1% to 100% 
 --- we need to have a frequency of 40kHz
 
-
+-> LED needs to go off when under mode threshold

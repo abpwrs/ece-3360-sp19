@@ -1,0 +1,18 @@
+three modes:  A, B, C
+
+three thresholds, varying based on the mode 
+
+increment through modes with push button, wrapping back around at overflow (think lab 2)
+
+
+
+
+
+
+
+
+
+
+
+
+
