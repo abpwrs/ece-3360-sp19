@@ -100,6 +100,12 @@
     <Compile Include="main.asm">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="MainBackup.asm">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="TwoLineTest.asm">
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
   <Import Project="$(AVRSTUDIO_EXE_PATH)\\Vs\\Assembler.targets" />
 </Project>
