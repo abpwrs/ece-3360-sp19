@@ -104,17 +104,6 @@ ldi r30, LOW(2*msg_a)
 ldi r31, HIGH(2*msg_a)
 rcall displayCString
 
-// Loading in A and B
-/*ldi data_reg, 0x04
-out PORTC, data_reg
-rcall lcd_strobe
-rcall delay_200_us
-
-ldi data_reg, 0x02
-out PORTC, data_reg
-rcall lcd_strobe
-rcall delay_200_us*/
-
 main:
 	rcall read_rpg
 	rcall which_direction
