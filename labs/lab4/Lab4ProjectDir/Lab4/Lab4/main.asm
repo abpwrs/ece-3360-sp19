@@ -33,18 +33,34 @@ rjmp skip_interrupt
 .org 0x001
 	rjmp button_interrupt
 // /////////////////////////////////////////////////////////////////////
+
+// 
+// /////////////////////////////////////////////////////////////////////
+//.org 0x002
+//	rjmp tach_interrupt
+
+// /////////////////////////////////////////////////////////////////////
+
+.org 0x010        ; PC points here on timer 0 
+	rjmp tim0_ovf ;   over flow interrupt
+
 .org 0x1a
 skip_interrupt:
 
 // interrupt config
+
 ldi r16, 0x03
 sts EICRA, r16
 ldi r16, 0x01
 out EIMSK, r16
-//ldi r16, 0x02
-//sts PCMSK2, r16
-//ldi r16, 0x04
-//sts PCICR, r16
+
+lds r16, TIMSK0 
+ori r16, 0x01       ; Overflow interrupt enable 
+sts TIMSK0, r16
+/*ldi r16, 0x03
+sts EICRA, r16
+ldi r16, 0x01
+out EIMSK, r16*/
 ldi r16, 0x00
 
 // set port numbers
@@ -79,9 +95,9 @@ cbi DDRD, 2
 .def current_state = r16
 .def previous_state = r17
 .def duty_reg = r18
-.equ upper_cycle_limit = 201
+.equ upper_cycle_limit = 198
 .equ lower_cycle_limit = 1
-.equ half_duty_cycle = 128
+.equ half_duty_cycle = 100
 ldi duty_reg, half_duty_cycle
 
 .equ BOTH_ON = 0x03
@@ -105,10 +121,20 @@ out TCCR0A, r29
 ldi r29, 0x09 // 0 0 0 0 1 0 0 1 (mode to 7 + prescale of 1)
 out TCCR0B, r29
 
-ldi r29, 201 // set TOP of counter -- i.e. where the TOVO bit gets set
+ldi r29, 199 // set TOP of counter -- i.e. where the TOVO bit gets set
 out OCR0A, r29
 
 out OCR0B, duty_reg // Set PWM flip point, OCR0B is the pwm active reg
+pop r29
+// ///////////////////////////////////////////////////////////////////
+
+// Configure Tachometer Sampling
+// ///////////////////////////////////////////////////////////////////
+push r29
+ldi r29, 0x00 // 0 0 0 0 0 0 0 0 (Compare to non invert + mode to 0)
+sts TCCR2A, r29
+ldi r29, 0x09 // 0 0 0 0 0 1 0 1 (mode to 0 + prescale of 256) # 255 clock ticks
+sts TCCR2B, r29
 pop r29
 // ///////////////////////////////////////////////////////////////////
 
@@ -116,13 +142,14 @@ pop r29
 // Mode Configuration Variables
 // ////////////////////////////
 .def mode_reg = r24
+.def pos_tach_count = r25
 // mode_reg meanings
 // 0x00 --> mode a
 // 0x01 --> mode b
 // 0x02 --> mode c
-.equ mode_a_thresh = 100 // threshold for mode a
-.equ mode_b_thresh = 150 // threshold for mode b
-.equ mode_c_thresh = 200 // threshold for mode c
+.equ mode_a_thresh = 2 // threshold for mode a
+.equ mode_b_thresh = 5 // threshold for mode b
+.equ mode_c_thresh = 10 // threshold for mode c --> frequency is 78Hz check
 // ////////////////////////////
 
 
@@ -165,8 +192,7 @@ main:
 	// RPG Sub-Methods 
 	rcall read_rpg // Uses 16, 17
 	rcall which_direction // 16, 17, 18
-	rcall delay
-
+	//rcall delay_sampling
 	
 	// Fan Signal to display mode result: 19 - 29 available
 	// push regs
@@ -260,7 +286,33 @@ disp_mode_c:
 	rcall displayCString
 	ret
 
+// tach interrupt
+tim0_ovf:
+	push r21
+	push r20
+    // Stop timer 0
+    in r20, TCCR0B //
+    ldi r21, 0x00
+    out TCCR0B, r21
 
+    // Clear over flow flag
+    in r21, TIFR0
+    sbr r21, 1<<TOV0
+    out TIFR0, r21
+
+    // Start timer with new initial count
+	push r29
+	ldi r29, 0x00
+    out TCNT0, r29 // starting point of timer
+    out TCCR0B, r20
+	pop r29
+	pop r20
+	pop r21
+	reti
+
+
+
+// btn interrupt
 button_interrupt:
 	push r16
 	push r30
@@ -271,7 +323,7 @@ button_interrupt:
 	in r16, SREG
 
 	inc mode_reg
-	cpi mode_reg, 0x03
+	cpi mode_reg, 0x02
 	brlo mode_end
 	ldi mode_reg, 0x00
 	mode_end:
@@ -339,7 +391,7 @@ move_to_bottom:
 // Subroutine to check for edge cases --> 0% and 100% 
 // /////////////////////////////////////////////////////////////////////
 duty_edge_cases:
-	cpi duty_reg, 0xC8  // compare 200
+	cpi duty_reg, 0xC6  // compare 200
 	brsh duty_hundo     // jump to 100%
 	cpi duty_reg, 0x02  // compare 2
 	brlo duty_zero      // jump to 0%
@@ -580,7 +632,7 @@ set_to_4_bit_mode:
 
 // Delaying for PWM
 //////////////////////////////////////////////////////////////////////
-delay:
+delay_pwm:
 	push r21
 	push r20
     // Stop timer 0
@@ -601,10 +653,41 @@ delay:
 	pop r29
 	pop r20
 	
-wait: // check the timer overflow bit
+wait_pwm: // check the timer overflow bit
     in r21, TIFR0
     sbrs r21, TOV0
-    rjmp wait
+    rjmp wait_pwm
+	pop r21
+    ret
+
+// Delay and sampling
+//////////////////////////////////////////////////////////////////////
+delay_sampling:
+	push r21
+	push r20
+    // Stop timer 0
+    lds r20, TCCR2B //
+    ldi r21, 0x00
+    sts TCCR2B, r21
+
+    // Clear over flow flag
+    in r21, TIFR2
+    sbr r21, 1<<TOV2
+    sts TIFR2, r21
+
+    // Start timer with new initial count
+	push r29
+	ldi r29, 0x00
+    sts TCNT2, r29 // starting point of timer
+    sts TCCR2B, r20
+	pop r29
+	pop r20
+	
+wait_sampling: // check the timer overflow bit
+    in r21, TIFR2
+
+    sbrs r21, TOV2
+    rjmp wait_sampling
 	pop r21
     ret
 
