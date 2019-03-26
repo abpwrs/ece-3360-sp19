@@ -16,8 +16,6 @@ Registers:
 -- 19 -> data_reg -> used to load lcd nibble by nibble 
 
 
-Subroutines:
-
 
 TODOs:
 -> Use an interrupt service routine to measure the button push 
