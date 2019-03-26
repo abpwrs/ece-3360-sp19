@@ -25,6 +25,27 @@
 // /////////////////////////////////
 .cseg
 // /////////////////////////////////
+.org 0x00
+// skip interrupt
+rjmp skip_interrupt
+// button interupt method
+// /////////////////////////////////////////////////////////////////////
+.org 0x001
+	rjmp button_interrupt
+// /////////////////////////////////////////////////////////////////////
+.org 0x1a
+skip_interrupt:
+
+// interrupt config
+ldi r16, 0x03
+sts EICRA, r16
+ldi r16, 0x01
+out EIMSK, r16
+//ldi r16, 0x02
+//sts PCMSK2, r16
+//ldi r16, 0x04
+//sts PCICR, r16
+ldi r16, 0x00
 
 // set port numbers
 //////////////////////////////////////////////////////////////////////
@@ -51,6 +72,7 @@ sbi DDRC, D6
 sbi DDRC, D7
 sbi DDRB, RS
 sbi DDRB, E
+cbi DDRD, 2
 
 // variables for current and previous state of the rpg
 ////////////////////////////////////////////////////////////////////////////////
@@ -91,6 +113,19 @@ pop r29
 // ///////////////////////////////////////////////////////////////////
 
 
+// Mode Configuration Variables
+// ////////////////////////////
+.def mode_reg = r24
+// mode_reg meanings
+// 0x00 --> mode a
+// 0x01 --> mode b
+// 0x02 --> mode c
+.equ mode_a_thresh = 100 // threshold for mode a
+.equ mode_b_thresh = 150 // threshold for mode b
+.equ mode_c_thresh = 200 // threshold for mode c
+// ////////////////////////////
+
+
 // Tables
 // ///////////////////////////////////////////////////////////////////
 rjmp table_skip // skip table execution
@@ -99,6 +134,7 @@ msg_0:   .db "DC =   0.0%", 0x00
 msg_100: .db "DC = 100.0%", 0x00
 msg_a:   .db "Mode A:", 0x00
 msg_b:   .db "Mode B:", 0x00
+msg_c:   .db "Mode C:", 0x00
 table_skip:
 // ///////////////////////////////////////////////////////////////////
 
@@ -119,7 +155,10 @@ sbi PORTB, RS
 rcall displayCString
 // ///////////////////
 
+// initial display of the mode
+rcall disp_mode
 
+sei
 // Main loop
 // /////////////////////////////////////////////////////////////////////
 main:
@@ -146,9 +185,9 @@ main:
 	push r21
 	push r22
 	push r23
-	
+	cli
 	rcall update_duty_display // preps 25 and 26 for display and displays DC = xx.x%
-
+	sei
 	// pop registers
 	pop r23
 	pop r22
@@ -161,10 +200,93 @@ main:
 	pop r15
 	pop r14
 
-
 	rjmp main
 // /////////////////////////////////////////////////////////////////////
 
+// display the current mode based on mode reg
+// /////////////////////////////////////////////////////////////////////
+disp_mode:
+	rcall move_to_bottom
+	cpi mode_reg, 0x00
+	breq disp_a
+	cpi mode_reg, 0x01
+	breq disp_b
+	cpi mode_reg, 0x02
+	breq disp_c
+	// mode reg is in and invalid state (reset to mode a)
+	ldi mode_reg, 0x00
+	rjmp disp_mode_end
+
+
+disp_a:
+	rcall disp_mode_a
+	rjmp disp_mode_end
+
+
+
+disp_b:
+	rcall disp_mode_b
+	rjmp disp_mode_end
+
+
+disp_c:
+	rcall disp_mode_c
+	rjmp disp_mode_end
+
+disp_mode_end:
+	ret
+	
+
+// /////////////////////////////////////////////////////////////////////
+
+disp_mode_a:
+	ldi R30, LOW(2*msg_a)
+	ldi R31, HIGH(2*msg_a)
+	sbi PORTB, RS
+	rcall displayCString
+	ret
+
+disp_mode_b:
+	ldi R30, LOW(2*msg_b)
+	ldi R31, HIGH(2*msg_b)
+	sbi PORTB, RS
+	rcall displayCString
+	ret
+
+disp_mode_c:
+	ldi R30, LOW(2*msg_c)
+	ldi R31, HIGH(2*msg_c)
+	sbi PORTB, RS
+	rcall displayCString
+	ret
+
+
+button_interrupt:
+	push r16
+	push r30
+	push r31
+	push r0
+	push data_reg
+
+	in r16, SREG
+
+	inc mode_reg
+	cpi mode_reg, 0x02
+	brlo mode_end
+	ldi mode_reg, 0x00
+	mode_end:
+
+	rcall disp_mode
+
+	out SREG, r16
+
+	pop data_reg
+	pop r0
+	pop r31
+	pop r30
+	pop r16
+
+	reti
 
 // returns the cursor to the first cell of the first row
 // /////////////////////////////////////////////////////////////////////
@@ -197,6 +319,22 @@ move_to_5_pos:
 	ret
 // /////////////////////////////////////////////////////////////////////
 
+// move cursor to the lower line
+// /////////////////////////////////////////////////////////////////////
+move_to_bottom:
+	cbi PORTB, 5
+	ldi data_reg, 0x0C
+	out PORTC, data_reg
+	rcall lcd_strobe
+	rcall delay_200_us
+	ldi data_reg, 0x00
+	out PORTC, data_reg
+	rcall lcd_strobe
+	rcall delay_200_us
+	ret
+
+// /////////////////////////////////////////////////////////////////////
+
 
 // Subroutine to check for edge cases --> 0% and 100% 
 // /////////////////////////////////////////////////////////////////////
@@ -212,7 +350,6 @@ duty_edge_cases:
 // subroutine to display the entire top line as the 100.0% string
 // /////////////////////////////////////////////////////////////////////
 duty_hundo:
-	rcall display_home
 	ldi R30, LOW(2*msg_100)
 	ldi R31, HIGH(2*msg_100)
 	rcall displayCString
@@ -223,7 +360,6 @@ duty_hundo:
 // subroutine to display the entire top line as the 0.0% string
 // /////////////////////////////////////////////////////////////////////
 duty_zero:
-	rcall display_home
 	ldi R30, LOW(2*msg_0)
 	ldi R31, HIGH(2*msg_0)
 	rcall displayCString
@@ -234,6 +370,7 @@ duty_zero:
 // main subroutine for updating the display based on the duty cycle
 // /////////////////////////////////////////////////////////////////////
 update_duty_display:
+	rcall display_home
 	rjmp duty_edge_cases   // check for edge cases before doing computations
 no_edge_return:            // tag to return to if neither edge case is met	
     rcall move_to_5_pos    // move the cursor to the correct position to write	
@@ -312,6 +449,7 @@ duty_display_end: // end tag for edge case methods to jump to
 // subroutine to display a constant string 
 // /////////////////////////////////////////////////////////////////////
 displayCString:             // Prints whatever is in Z
+    cli
 	sbi PORTB, RS
 	lpm r0,Z+               // <-- first byte 
 	tst r0                  // Reached end of message ? 
@@ -326,6 +464,7 @@ displayCString:             // Prints whatever is in Z
 	rcall delay_10_ms
 	rjmp displayCstring 
 doneC: 
+	sei
 	ret
 // /////////////////////////////////////////////////////////////////////
 
@@ -337,6 +476,7 @@ displayDString:             // Prints whatever is in Z
 	sbi PORTB, RS
 	ldi r30, LOW(active)
 	ldi r31, HIGH(active)
+	cli
 progressDString:
 	ld r0,Z+               // <-- first byte 
 	tst r0                  // Reached end of message ? 
@@ -351,6 +491,7 @@ progressDString:
 	//rcall delay_10_ms
 	rjmp progressDString 
 doneD: 
+	sei
 	ret
 
 // toggle enable off - on - off
