@@ -271,7 +271,7 @@ button_interrupt:
 	in r16, SREG
 
 	inc mode_reg
-	cpi mode_reg, 0x02
+	cpi mode_reg, 0x03
 	brlo mode_end
 	ldi mode_reg, 0x00
 	mode_end:
@@ -449,7 +449,6 @@ duty_display_end: // end tag for edge case methods to jump to
 // subroutine to display a constant string 
 // /////////////////////////////////////////////////////////////////////
 displayCString:             // Prints whatever is in Z
-    cli
 	sbi PORTB, RS
 	lpm r0,Z+               // <-- first byte 
 	tst r0                  // Reached end of message ? 
@@ -464,7 +463,6 @@ displayCString:             // Prints whatever is in Z
 	rcall delay_10_ms
 	rjmp displayCstring 
 doneC: 
-	sei
 	ret
 // /////////////////////////////////////////////////////////////////////
 
@@ -476,7 +474,6 @@ displayDString:             // Prints whatever is in Z
 	sbi PORTB, RS
 	ldi r30, LOW(active)
 	ldi r31, HIGH(active)
-	cli
 progressDString:
 	ld r0,Z+               // <-- first byte 
 	tst r0                  // Reached end of message ? 
@@ -491,7 +488,6 @@ progressDString:
 	//rcall delay_10_ms
 	rjmp progressDString 
 doneD: 
-	sei
 	ret
 
 // toggle enable off - on - off
