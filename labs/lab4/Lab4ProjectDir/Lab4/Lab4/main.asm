@@ -36,11 +36,10 @@ rjmp skip_interrupt
 
 // 
 // /////////////////////////////////////////////////////////////////////
-//.org 0x002
-//	rjmp tach_interrupt
+.org 0x002
+	rjmp tach_interrupt
 
 // /////////////////////////////////////////////////////////////////////
-
 .org 0x010        ; PC points here on timer 0 
 	rjmp tim0_ovf ;   over flow interrupt
 
@@ -49,9 +48,9 @@ skip_interrupt:
 
 // interrupt config
 
-ldi r16, 0x03
+ldi r16, 0x0F
 sts EICRA, r16
-ldi r16, 0x01
+ldi r16, 0x03
 out EIMSK, r16
 
 lds r16, TIMSK0 
@@ -142,7 +141,8 @@ pop r29
 // Mode Configuration Variables
 // ////////////////////////////
 .def mode_reg = r24
-.def pos_tach_count = r25
+.def pos_tach_reg = r25
+.def tach_save_reg = r26
 // mode_reg meanings
 // 0x00 --> mode a
 // 0x01 --> mode b
@@ -156,12 +156,16 @@ pop r29
 // Tables
 // ///////////////////////////////////////////////////////////////////
 rjmp table_skip // skip table execution
-msg_dc:  .db "DC =      %", 0x00
-msg_0:   .db "DC =   0.0%", 0x00
+msg_dc: .db "DC =      %", 0x00
+msg_0: .db "DC =   0.0%", 0x00
 msg_100: .db "DC = 100.0%", 0x00
-msg_a:   .db "Mode A:", 0x00
-msg_b:   .db "Mode B:", 0x00
-msg_c:   .db "Mode C:", 0x00
+msg_a: .db "Mode A:", 0x00
+msg_b: .db "Mode B:", 0x00
+msg_c: .db "Mode C:", 0x00
+msg_ok:      .db "OK     "
+msg_low_rpm: .db "LOW RPM", 0x00
+msg_alarm:   .db "ALARM", 0x00
+
 table_skip:
 // ///////////////////////////////////////////////////////////////////
 
@@ -183,7 +187,9 @@ rcall displayCString
 // ///////////////////
 
 // initial display of the mode
+
 rcall disp_mode
+
 
 sei
 // Main loop
@@ -201,6 +207,7 @@ main:
 
 	// Fill in duty cycle %:  19 - 29 available
 	// push registers
+	cli
 	push r14
 	push r15
 	push r16
@@ -211,9 +218,7 @@ main:
 	push r21
 	push r22
 	push r23
-	cli
 	rcall update_duty_display // preps 25 and 26 for display and displays DC = xx.x%
-	sei
 	// pop registers
 	pop r23
 	pop r22
@@ -226,8 +231,54 @@ main:
 	pop r15
 	pop r14
 
+	rcall update_mode_display
+	sei
+
 	rjmp main
 // /////////////////////////////////////////////////////////////////////
+
+
+update_mode_display:
+	rcall move_to_9_pos_bottom
+	
+disp_ok:
+	rcall disp_mode_ok
+	rjmp update_mode_display_end
+
+disp_low_rmp:	
+	rcall disp_mode_low_rpm
+	rjmp update_mode_display_end
+
+disp_alarm:
+	rcall disp_mode_alarm
+	rjmp update_mode_display_end
+
+
+update_mode_display_end:
+	ret
+
+disp_mode_ok:
+	ldi R30, LOW(2*msg_ok)
+	ldi R31, HIGH(2*msg_ok)
+	sbi PORTB, RS
+	rcall displayCString
+	ret
+
+disp_mode_low_rpm:
+	ldi R30, LOW(2*msg_low_rpm)
+	ldi R31, HIGH(2*msg_low_rpm)
+	sbi PORTB, RS
+	rcall displayCString
+	ret
+
+disp_mode_alarm:
+	ldi R30, LOW(2*msg_alarm)
+	ldi R31, HIGH(2*msg_alarm)
+	sbi PORTB, RS
+	rcall displayCString
+	ret
+
+
 
 // display the current mode based on mode reg
 // /////////////////////////////////////////////////////////////////////
@@ -286,7 +337,16 @@ disp_mode_c:
 	rcall displayCString
 	ret
 
-// tach interrupt
+
+// tack increment interrupt
+tach_interrupt:
+	cpi pos_tach_reg, 0xFF
+	breq tach_int_end
+	inc pos_tach_reg
+tach_int_end:
+	reti
+	
+// timer overflow interrupt
 tim0_ovf:
 	push r21
 	push r20
@@ -309,7 +369,6 @@ tim0_ovf:
 	pop r20
 	pop r21
 	reti
-
 
 
 // btn interrupt
@@ -385,6 +444,17 @@ move_to_bottom:
 	rcall delay_200_us
 	ret
 
+move_to_9_pos_bottom:
+	cbi PORTB, 5
+	ldi data_reg, 0x0C
+	out PORTC, data_reg
+	rcall lcd_strobe
+	rcall delay_200_us
+	ldi data_reg, 0x09
+	out PORTC, data_reg
+	rcall lcd_strobe
+	rcall delay_200_us
+	ret
 // /////////////////////////////////////////////////////////////////////
 
 
@@ -508,11 +578,11 @@ displayCString:             // Prints whatever is in Z
 	swap  r0                // Upper nibble in place 
 	out   PORTC,r0          // Send upper nibble out 
 	rcall lcd_strobe        // Latch nibble		
-	rcall delay_10_ms
+	//rcall delay_10_ms
 	swap  r0                // Lower nibble in place 
 	out   PORTC,r0          // Send lower nibble out 
 	rcall lcd_strobe        // Latch nibble 
-	rcall delay_10_ms
+	//rcall delay_10_ms
 	rjmp displayCstring 
 doneC: 
 	ret
@@ -630,36 +700,6 @@ set_to_4_bit_mode:
 // ////////////////////////////////////////////////////////////////////
 
 
-// Delaying for PWM
-//////////////////////////////////////////////////////////////////////
-delay_pwm:
-	push r21
-	push r20
-    // Stop timer 0
-    in r20, TCCR0B //
-    ldi r21, 0x00
-    out TCCR0B, r21
-
-    // Clear over flow flag
-    in r21, TIFR0
-    sbr r21, 1<<TOV0
-    out TIFR0, r21
-
-    // Start timer with new initial count
-	push r29
-	ldi r29, 0x00
-    out TCNT0, r29 // starting point of timer
-    out TCCR0B, r20
-	pop r29
-	pop r20
-	
-wait_pwm: // check the timer overflow bit
-    in r21, TIFR0
-    sbrs r21, TOV0
-    rjmp wait_pwm
-	pop r21
-    ret
-
 // Delay and sampling
 //////////////////////////////////////////////////////////////////////
 delay_sampling:
@@ -682,12 +722,13 @@ delay_sampling:
     sts TCCR2B, r20
 	pop r29
 	pop r20
-	
+
+	ldi pos_tach_reg, 0x00
 wait_sampling: // check the timer overflow bit
     in r21, TIFR2
-
     sbrs r21, TOV2
     rjmp wait_sampling
+	mov tach_save_reg, pos_tach_reg
 	pop r21
     ret
 
@@ -947,5 +988,3 @@ sbi PORTB, 5
 ldi r30, LOW(2*msg_a)
 ldi r31, HIGH(2*msg_a)
 rcall displayCString*/
-
-
