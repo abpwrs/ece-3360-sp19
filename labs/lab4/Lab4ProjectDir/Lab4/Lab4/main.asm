@@ -11,35 +11,32 @@
 //=============================================================================
 
 // .inc include files
-//////////////////////////////////////////////////////////////////////
+// //////////////////
 .include "m88PAdef.inc"
+// //////////////////
 
 // Allocate memory in DSEG for dynamic string
-// //////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
 .dseg
 	active: .BYTE 5
-// //////////////////////////////////////////
-
+//////////////////////////////////////////////////////////////////////
 
 // the rest of the code goes in cseg
-// /////////////////////////////////
+//////////////////////////////////////////////////////////////////////
 .cseg
-// /////////////////////////////////
+//////////////////////////////////////////////////////////////////////
 .org 0x00
 // skip interrupt
 rjmp skip_interrupt
-// button interupt method
-// /////////////////////////////////////////////////////////////////////
+
+// interupt methods
+// ///////////////////////////////////////////////////////////////////
 .org 0x001
 	rjmp button_interrupt
-// /////////////////////////////////////////////////////////////////////
 
-// 
-// /////////////////////////////////////////////////////////////////////
 .org 0x002
 	rjmp tach_interrupt
 
-// /////////////////////////////////////////////////////////////////////
 .org 0x010        ; PC points here on timer 0 
 	rjmp tim0_ovf ;   over flow interrupt
 
@@ -50,7 +47,7 @@ rjmp skip_interrupt
 skip_interrupt:
 
 // interrupt config
-
+// ///////////////////////////////////////////////////////////////////
 ldi r16, 0x0F
 sts EICRA, r16
 ldi r16, 0x03
@@ -133,7 +130,6 @@ pop r29
 
 // Configure Tachometer Sampling
 // ///////////////////////////////////////////////////////////////////
-
 push r29
 ldi r29, 0x00 // 0 0 0 0 0 0 0 0 (Compare to non invert + mode to 0)
 sts TCCR1A, r29
@@ -141,7 +137,6 @@ ldi r29, 0x03 // 0 0 0 0 0 0 1 1 (mode to 0 + prescale of 64) # 65535 clock tick
 sts TCCR1B, r29
 pop r29
 // ///////////////////////////////////////////////////////////////////
-
 
 // Mode Configuration Variables
 // ////////////////////////////
@@ -151,10 +146,8 @@ pop r29
 // mode_reg meanings
 // 0x00 --> mode a
 // 0x01 --> mode b
-// 0x02 --> mode c
 .equ mode_a_thresh = 1 // threshold for mode a
 .equ mode_b_thresh = 21 // threshold for mode b
-.equ mode_c_thresh = 10 // threshold for mode c --> frequency is 78Hz check
 // ////////////////////////////
 
 
@@ -166,14 +159,11 @@ msg_0: .db "DC =   0.0%", 0x00
 msg_100: .db "DC = 100.0%", 0x00
 msg_a: .db "Mode A:", 0x00
 msg_b: .db "Mode B:", 0x00
-msg_c: .db "Mode C:", 0x00
 msg_ok:      .db "OK     ", 0x00
 msg_low_rpm: .db "LOW RPM", 0x00
 msg_alarm:   .db "ALARM  ", 0x00
-
 table_skip:
 // ///////////////////////////////////////////////////////////////////
-
 
 // initailize the LCD to 8 bit mode
 // ////////////////////////////////
@@ -181,7 +171,6 @@ push data_reg
 rcall lcd_init
 pop data_reg
 // ////////////////////////////////
-
 
 // initial top display:
 // ///////////////////
@@ -192,9 +181,7 @@ rcall displayCString
 // ///////////////////
 
 // initial display of the mode
-
 rcall disp_mode
-
 
 sei
 // Main loop
@@ -203,21 +190,12 @@ main:
 	// RPG Sub-Methods 
 	rcall read_rpg // Uses 16, 17
 	rcall which_direction // 16, 17, 18
-	// rcall delay_sampling
 	
-	// Fan Signal to display mode result: 19 - 29 available
-	// push regs
-	// call stuff
-	// pop regs
-
-	// Fill in duty cycle %:  19 - 29 available
 	// push registers
-	
 	push r14
 	push r15
 	push r16
 	push r17
-	//push r18
 	push r19
 	push r20
 	push r21
@@ -232,17 +210,14 @@ main:
 	pop r21
 	pop r20
 	pop r19
-	//pop r18
 	pop r17
 	pop r16
 	pop r15
 	pop r14
-	sei 
-	
+	sei
 	nop
 	nop
 	nop
-
 	cli
 	rcall update_mode_display
 	sei
@@ -250,10 +225,8 @@ main:
 	rjmp main
 // /////////////////////////////////////////////////////////////////////
 
-
 update_mode_display:
 	rcall move_to_9_pos_bottom
-
 	cpi mode_reg, 0x00
 	breq mode_a_helper
 	rjmp mode_b_helper
@@ -280,7 +253,6 @@ disp_alarm:
 	rcall disp_mode_alarm
 	rjmp update_mode_display_end
 
-
 update_mode_display_end:
 	ret
 
@@ -305,8 +277,6 @@ disp_mode_alarm:
 	rcall displayCString
 	ret
 
-
-
 // display the current mode based on mode reg
 // /////////////////////////////////////////////////////////////////////
 disp_mode:
@@ -315,32 +285,21 @@ disp_mode:
 	breq disp_a
 	cpi mode_reg, 0x01
 	breq disp_b
-	cpi mode_reg, 0x02
-	breq disp_c
 	// mode reg is in and invalid state (reset to mode a)
 	ldi mode_reg, 0x00
 	rjmp disp_mode_end
-
 
 disp_a:
 	rcall disp_mode_a
 	rjmp disp_mode_end
 
-
-
 disp_b:
 	rcall disp_mode_b
-	rjmp disp_mode_end
-
-
-disp_c:
-	rcall disp_mode_c
 	rjmp disp_mode_end
 
 disp_mode_end:
 	ret
 	
-
 // /////////////////////////////////////////////////////////////////////
 
 disp_mode_a:
@@ -357,35 +316,11 @@ disp_mode_b:
 	rcall displayCString
 	ret
 
-disp_mode_c:
-	ldi R30, LOW(2*msg_c)
-	ldi R31, HIGH(2*msg_c)
-	sbi PORTB, RS
-	rcall displayCString
-	ret
-
-
 // tack increment interrupt
 tach_interrupt:
 	cpi pos_tach_reg, 0xFE
 	brsh tach_int_end
 	inc pos_tach_reg
-	sbi PORTB, 0
-	nop
-	nop
-	nop
-	nop
-	nop
-	nop
-	nop
-	nop
-	nop
-	nop
-	nop
-	nop
-	nop
-	nop
-	cbi PORTB, 0
 tach_int_end:
 	reti
 	
@@ -440,7 +375,6 @@ tim1_ovf:
 	ldi pos_tach_reg, 0x00
 	reti
 
-
 // btn interrupt
 button_interrupt:
 	push r16
@@ -472,7 +406,7 @@ button_interrupt:
 // returns the cursor to the first cell of the first row
 // /////////////////////////////////////////////////////////////////////
 display_home:
-	cbi PORTB, 5//
+	cbi PORTB, 5
 	ldi data_reg, 0x08
 	out PORTC, data_reg
 	rcall lcd_strobe
@@ -581,7 +515,7 @@ no_edge_return:            // tag to return to if neither edge case is met
 .def	dv16uH	=r19
 .def	dcnt16u	=r20
 */
-	// ex: 61
+
     // divide duty reg by 2
 	mov dd16uL, duty_reg     // LSB of number to display
 	ldi r26, 0x00
@@ -594,8 +528,6 @@ no_edge_return:            // tag to return to if neither edge case is met
 	ldi r20,0x00             // Terminating NULL     
 	sts active+4,r20         // Store in RAM
 
-	// r16 now has 30
-	// r14 now has 1 or 0
 	mov r26, r14             // save off r14 into r26
 	cpi r26, 0x00            // check if it is zero
 	breq zero_dec            // move to place a zero iff r26 == 0x00
@@ -605,7 +537,6 @@ no_edge_return:            // tag to return to if neither edge case is met
 	ldi r25, 0x30            // load r25 with a '0' string
 	end_dec:
 	sts active+3,r25         // store the resulting r25 into dseg
-
 
 	// Generate decimal point. 
 	ldi r20,0x2e       // ASCII code for . 
@@ -627,16 +558,15 @@ no_edge_return:            // tag to return to if neither edge case is met
 	ldi r20,0x30
 	add r16, r20
 	sts active+0,r16
+
 	// display the updated string
 	rcall displayDString
-
 
 	pop r26
 	pop r25
 duty_display_end: // end tag for edge case methods to jump to
 	ret
 // /////////////////////////////////////////////////////////////////////
-
 
 // subroutine to display a constant string 
 // /////////////////////////////////////////////////////////////////////
@@ -648,11 +578,9 @@ displayCString:             // Prints whatever is in Z
 	swap  r0                // Upper nibble in place 
 	out   PORTC,r0          // Send upper nibble out 
 	rcall lcd_strobe        // Latch nibble		
-	//rcall delay_10_ms
 	swap  r0                // Lower nibble in place 
 	out   PORTC,r0          // Send lower nibble out 
 	rcall lcd_strobe        // Latch nibble 
-	//rcall delay_10_ms
 	rjmp displayCstring 
 doneC: 
 	sei
@@ -680,11 +608,9 @@ progressDString:
 	swap  r0                // Upper nibble in place 
 	out   PORTC,r0          // Send upper nibble out 
 	rcall lcd_strobe         // Latch nibble	
-	//rcall delay_10_ms
 	swap  r0                // Lower nibble in place 
 	out   PORTC,r0          // Send lower nibble out 
 	rcall lcd_strobe         // Latch nibble 
-	//rcall delay_10_ms
 	rjmp progressDString 
 doneD: 
 	ret
@@ -776,62 +702,8 @@ set_to_4_bit_mode:
 	ret
 // ////////////////////////////////////////////////////////////////////
 
-
-/*// Delay and sampling
+// 10ms, and 200us delays for LCD initialization
 //////////////////////////////////////////////////////////////////////
-delay_sampling:
-	push r21
-	push r20
-    // Stop timer 0
-    lds r20, TCCR1B //
-    ldi r21, 0x00
-    sts TCCR1B, r21
-
-    // Clear over flow flag
-    in r21, TIFR1
-    sbr r21, 1<<TOV1
-    sts TIFR1, r21
-
-    // Start timer with new initial count
-	push r29
-	ldi r29, 0x00
-    sts TCNT1, r29 // starting point of timer
-    sts TCCR1B, r20
-	pop r29
-	pop r20
-
-	ldi pos_tach_reg, 0x00
-wait_sampling: // check the timer overflow bit
-    in r21, TIFR1
-    sbrs r21, TOV1
-    rjmp wait_sampling
-	mov tach_save_reg, pos_tach_reg
-	pop r21
-    ret*/
-
-// 100ms, 10ms, and 200us delays for LCD initialization
-//////////////////////////////////////////////////////////////////////
-delay_100_ms:
-	  push r23
-	  push r24
-	  push r25
-	  nop
-	  ldi r23, 20      // r23 <-- Counter for outer loop
-  d11: ldi r24, 44     // r24 <-- Counter for level 2 loop
-  d12: ldi r25, 227    // r25 <-- Counter for inner loop
-  d13: dec r25
-      nop              // no operation
-      brne d13
-      dec r24
-      brne d12
-      dec r23
-      brne d11
-	  nop
-	  pop r25
-	  pop r24
-	  pop r23
-      ret
-
 delay_10_ms:
 	  push r23
 	  push r24
@@ -873,6 +745,7 @@ delay_200_us:
 	  pop r24
 	  pop r23
       ret
+
 // RPG sub-routines
 //////////////////////////////////////////////////////////////////////
 read_rpg:
@@ -988,80 +861,3 @@ d16u_3:	sec	               //set carry to be shifted into result
 	rjmp	d16u_1
 
 .exit
-
-
-
-// old displayDC method that is no longer used
-
-/*
-displayDC:             // Converts 3 digits in r25 r26 to active
-	
-	push r21
-
-	mov dd16uL,r25     // LSB of number to display
-	mov dd16uH,r26     // MSB of number to display  
-	ldi dv16uL,low(10) 
-	ldi dv16uH,high(10)
-
-	// Store terminating for the string. 
-	ldi r20,0x00       // Terminating NULL     
-	sts active+4,r20     // Store in RAM
-
-	// Divide the number by 10 and format remainder. 
-	rcall div16u       // Result: r17:r16, rem: r15:r14 
-	ldi r20,0x30 
-	add r14,r20     // Convert to ASCII 
-	sts active+3,r14     // Store in RAM
-	
-	// Generate decimal point. 
-	ldi r20,0x2e       // ASCII code for . 
-	sts active+2,r20     // Store in RAM
-
-	mov dd16uL, r16 
-	mov dd16uH, r17
-	rcall div16u
-
-	ldi r20,0x30
-	add r14, r20
-	sts active+1,r14
-
-	ldi r20,0x30
-	add r16, r20
-	sts active+0,r16
-
-	pop r21
-	ret
-*/
-
-
-// old code frome trying to get the lcd to work
-
-/*push r25
-push r26
-ldi r25,low(699)
-ldi r26,high(699)
-rcall displayDC
-rcall displayDString
-pop r26
-pop r25*/
-
-// 30 and 31 are always Z
-/*ldi R30, LOW(2*active)
-ldi R31, HIGH(2*active)
-sbi PORTB, RS
-rcall displayCString
-
-cbi PORTB, 5//
-ldi data_reg, 0x0C
-out PORTC, data_reg
-rcall lcd_strobe
-rcall delay_200_us
-ldi data_reg, 0x00
-out PORTC, data_reg
-rcall lcd_strobe
-rcall delay_200_us
-
-sbi PORTB, 5
-ldi r30, LOW(2*msg_a)
-ldi r31, HIGH(2*msg_a)
-rcall displayCString*/
