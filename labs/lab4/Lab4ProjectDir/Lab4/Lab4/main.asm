@@ -43,6 +43,9 @@ rjmp skip_interrupt
 .org 0x010        ; PC points here on timer 0 
 	rjmp tim0_ovf ;   over flow interrupt
 
+.org 0x00D
+	rjmp tim1_ovf
+
 .org 0x1a
 skip_interrupt:
 
@@ -56,10 +59,11 @@ out EIMSK, r16
 lds r16, TIMSK0 
 ori r16, 0x01       ; Overflow interrupt enable 
 sts TIMSK0, r16
-/*ldi r16, 0x03
-sts EICRA, r16
-ldi r16, 0x01
-out EIMSK, r16*/
+
+lds r16, TIMSK1 
+ori r16, 0x01       ; Overflow interrupt enable 
+sts TIMSK1, r16
+
 ldi r16, 0x00
 
 // set port numbers
@@ -129,11 +133,12 @@ pop r29
 
 // Configure Tachometer Sampling
 // ///////////////////////////////////////////////////////////////////
+
 push r29
 ldi r29, 0x00 // 0 0 0 0 0 0 0 0 (Compare to non invert + mode to 0)
-sts TCCR2A, r29
-ldi r29, 0x09 // 0 0 0 0 0 1 0 1 (mode to 0 + prescale of 256) # 255 clock ticks
-sts TCCR2B, r29
+sts TCCR1A, r29
+ldi r29, 0x03 // 0 0 0 0 0 0 1 1 (mode to 0 + prescale of 64) # 65535 clock ticks
+sts TCCR1B, r29
 pop r29
 // ///////////////////////////////////////////////////////////////////
 
@@ -147,8 +152,8 @@ pop r29
 // 0x00 --> mode a
 // 0x01 --> mode b
 // 0x02 --> mode c
-.equ mode_a_thresh = 2 // threshold for mode a
-.equ mode_b_thresh = 5 // threshold for mode b
+.equ mode_a_thresh = 1 // threshold for mode a
+.equ mode_b_thresh = 21 // threshold for mode b
 .equ mode_c_thresh = 10 // threshold for mode c --> frequency is 78Hz check
 // ////////////////////////////
 
@@ -162,9 +167,9 @@ msg_100: .db "DC = 100.0%", 0x00
 msg_a: .db "Mode A:", 0x00
 msg_b: .db "Mode B:", 0x00
 msg_c: .db "Mode C:", 0x00
-msg_ok:      .db "OK     "
+msg_ok:      .db "OK     ", 0x00
 msg_low_rpm: .db "LOW RPM", 0x00
-msg_alarm:   .db "ALARM", 0x00
+msg_alarm:   .db "ALARM  ", 0x00
 
 table_skip:
 // ///////////////////////////////////////////////////////////////////
@@ -198,7 +203,7 @@ main:
 	// RPG Sub-Methods 
 	rcall read_rpg // Uses 16, 17
 	rcall which_direction // 16, 17, 18
-	//rcall delay_sampling
+	// rcall delay_sampling
 	
 	// Fan Signal to display mode result: 19 - 29 available
 	// push regs
@@ -207,7 +212,7 @@ main:
 
 	// Fill in duty cycle %:  19 - 29 available
 	// push registers
-	cli
+	
 	push r14
 	push r15
 	push r16
@@ -218,7 +223,9 @@ main:
 	push r21
 	push r22
 	push r23
+	cli
 	rcall update_duty_display // preps 25 and 26 for display and displays DC = xx.x%
+	sei
 	// pop registers
 	pop r23
 	pop r22
@@ -230,7 +237,13 @@ main:
 	pop r16
 	pop r15
 	pop r14
+	sei 
+	
+	nop
+	nop
+	nop
 
+	cli
 	rcall update_mode_display
 	sei
 
@@ -240,7 +253,21 @@ main:
 
 update_mode_display:
 	rcall move_to_9_pos_bottom
+
+	cpi mode_reg, 0x00
+	breq mode_a_helper
+	rjmp mode_b_helper
 	
+mode_a_helper:
+	cpi tach_save_reg, mode_a_thresh
+	brsh disp_ok
+	rjmp disp_alarm
+
+mode_b_helper:
+	cpi tach_save_reg, mode_b_thresh
+	brsh disp_ok
+	rjmp disp_low_rmp
+
 disp_ok:
 	rcall disp_mode_ok
 	rjmp update_mode_display_end
@@ -340,9 +367,25 @@ disp_mode_c:
 
 // tack increment interrupt
 tach_interrupt:
-	cpi pos_tach_reg, 0xFF
-	breq tach_int_end
+	cpi pos_tach_reg, 0xFE
+	brsh tach_int_end
 	inc pos_tach_reg
+	sbi PORTB, 0
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	cbi PORTB, 0
 tach_int_end:
 	reti
 	
@@ -368,6 +411,33 @@ tim0_ovf:
 	pop r29
 	pop r20
 	pop r21
+	reti
+
+tim1_ovf:
+	push r21
+	push r20
+    // Stop timer 0
+    lds r20, TCCR1B //
+    ldi r21, 0x00
+    sts TCCR1B, r21
+
+    // Clear over flow flag
+    in r21, TIFR1
+    sbr r21, 1<<TOV1
+    sts TIFR1, r21
+
+    // Start timer with new initial count
+	push r29
+	ldi r29, 0x00
+    sts TCNT1H, r29 // starting point of timer
+	sts TCNT1L, r29 // starting point of timer
+    sts TCCR1B, r20
+	pop r29
+	pop r20
+	pop r21
+
+	mov tach_save_reg, pos_tach_reg
+	ldi pos_tach_reg, 0x00
 	reti
 
 
@@ -557,9 +627,9 @@ no_edge_return:            // tag to return to if neither edge case is met
 	ldi r20,0x30
 	add r16, r20
 	sts active+0,r16
-
 	// display the updated string
 	rcall displayDString
+
 
 	pop r26
 	pop r25
@@ -585,6 +655,13 @@ displayCString:             // Prints whatever is in Z
 	//rcall delay_10_ms
 	rjmp displayCstring 
 doneC: 
+	sei
+	nop
+	nop
+	nop
+	nop
+	nop
+	cli
 	ret
 // /////////////////////////////////////////////////////////////////////
 
@@ -700,37 +777,37 @@ set_to_4_bit_mode:
 // ////////////////////////////////////////////////////////////////////
 
 
-// Delay and sampling
+/*// Delay and sampling
 //////////////////////////////////////////////////////////////////////
 delay_sampling:
 	push r21
 	push r20
     // Stop timer 0
-    lds r20, TCCR2B //
+    lds r20, TCCR1B //
     ldi r21, 0x00
-    sts TCCR2B, r21
+    sts TCCR1B, r21
 
     // Clear over flow flag
-    in r21, TIFR2
-    sbr r21, 1<<TOV2
-    sts TIFR2, r21
+    in r21, TIFR1
+    sbr r21, 1<<TOV1
+    sts TIFR1, r21
 
     // Start timer with new initial count
 	push r29
 	ldi r29, 0x00
-    sts TCNT2, r29 // starting point of timer
-    sts TCCR2B, r20
+    sts TCNT1, r29 // starting point of timer
+    sts TCCR1B, r20
 	pop r29
 	pop r20
 
 	ldi pos_tach_reg, 0x00
 wait_sampling: // check the timer overflow bit
-    in r21, TIFR2
-    sbrs r21, TOV2
+    in r21, TIFR1
+    sbrs r21, TOV1
     rjmp wait_sampling
 	mov tach_save_reg, pos_tach_reg
 	pop r21
-    ret
+    ret*/
 
 // 100ms, 10ms, and 200us delays for LCD initialization
 //////////////////////////////////////////////////////////////////////
