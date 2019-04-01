@@ -1,0 +1,31 @@
+# pseudo-code & brain dump
+
+
+# how do we represent morse code in memory, and how do we convert to ascii
+# ########################################################################
+2 options:
+
+# 1
+. --> 0
+- --> 1
+
+
+# 2 
+- --> 0
+. --> 1
+
+the issue is that 1 and 01 have to be different
+
+first solution:
+have 6 look-up tables and select the look-up table based on the length of the word
+the maximum code is of length 6 for punctuation
+
+# REFERENCE encoding.xlsx
+
+# ########################################################################
+
+
+
+
+
+
