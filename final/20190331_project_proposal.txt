@@ -1,21 +1,27 @@
 ECE:3360 Spring 2019
 Alexander Powers and Benjamin Mitchinson
 
+* We realized while investigating the camera of our initial proposal that the 
+memory required to receive data was much much higher than expected, and had 
+concerns of adding extra data while implementing Bluetooth. Below is a new more 
+detailed proposal, on an idea that we're more invested in. *
 
 Product:
-A bluetooth connected photo booth, that transmits images directly to the user after the image is caputred. 
-
+A morse code transmitter and reciever pair, with LCD output and wireless bluetooth
+connection. 
 
 Functionality:
-User presses a button. On button press a photo is taken and serialized to be transmitted over bluetooth.
-The reciever program will then recieve the serialized image to be stored and displayed.
+On one of two Atmega88PA boards, the user will input morse code characters
+into a debounced button, which will then be interperated as an ASCII value. 
+The characters will then be transmitted over bluetooth to the listening Atmega88PA
+board. This listening board will then display the recieved ASCII data as it's
+recieved onto the LCD Display.
 
+Parts:0
+HC-05 bluetooth module (x2)
+* Purchase link (9 usd on amazon)
+https://tinyurl.com/G23-HC05
 
+Atmega88PA Development Board (x2)
 
-
-
-
-
-
-
-
+LCD Display (from Lab 4)
