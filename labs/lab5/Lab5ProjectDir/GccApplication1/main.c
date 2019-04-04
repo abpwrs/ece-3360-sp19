@@ -38,20 +38,35 @@ void usart_init();
 
 //unsigned char tmp; // puts this in SRAM
 //static const char fdata[] PROGMEM = "Flash Gordon\n";  // String in Flash (Storing in flash is broken and idk why? Compile type?)
-const char * sdata = "AB\n\r"; // String in SRAM 
+const char * sdata = "Enter 4 characters to reverse:"; // String in SRAM
+const char * newline = "\n\r";
+const char * hi = "Hi!\n\r";
+char input;
+char inputstring[5] = "";
 
 int main(void)
 {
 	// DDRC = 0x20;			 // sbi DDRC, 5 : PORTC 5 Output
 	
 	usart_init();
-	//sendhi();
+	usart_prints(newline);
+	usart_prints(newline);
+
 	usart_prints(sdata);
-	//read_char_from_pc();
+	int i = 0;
+	while (i < 4){
+		input = read_char_from_pc();
+		inputstring[i] = input;
+		i++;
+	}
+
+	usart_prints(newline);
+
+	strrev(inputstring);
+	usart_prints(inputstring);
 
     while (1) 
     {
-
     }
 }
 
@@ -106,7 +121,6 @@ void usart_prints(const char *sdata) {
 		while (!(UCSR0A & (1<<UDRE0)));  // Option A
 		//while (!(UCSR0A & (1<<TXC0))); // Option B
 			UDR0 = *(sdata++);
-		//}
 	}
 }
 
