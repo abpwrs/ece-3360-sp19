@@ -16,6 +16,7 @@
 // Required Imports
 #include <avr/io.h>
 #include <util/delay.h>
+#include <stdio.h>
 // ////////////////
 
 // Function Prototypes
@@ -33,6 +34,10 @@ void receivedisable();
 // usart io
 unsigned char read_char_from_pc();
 void usart_init();
+// using the adc
+void adc_init();
+
+unsigned int read_adc();
 // ///////////////////
 
 
@@ -49,25 +54,29 @@ int main(void)
 	// DDRC = 0x20;			 // sbi DDRC, 5 : PORTC 5 Output
 	
 	usart_init();
-	usart_prints(newline);
-
-	usart_prints(sdata);
-	int i = 0;
-	while (i < 4){
-		input = read_char_from_pc();
-		inputstring[i] = input;
-		i++;
-	}
-
-	usart_prints(newline);
-
-	strrev(inputstring);
-	usart_prints(inputstring);
-	usart_prints(newline);
+	adc_init();
 
     while (1) 
     {
-    }
+		usart_prints(newline);
+		usart_prints(sdata);
+		int i = 0;
+		while (i < 4){
+			input = read_char_from_pc();
+			inputstring[i] = input;
+			i++;
+		}
+
+		strrev(inputstring);
+		usart_prints(newline);
+		usart_prints(inputstring);
+		usart_prints(newline);
+		unsigned int adc_output = read_adc();
+		int enough = (int) ((ceil(log10(adc_output))+1)*sizeof(char));
+		char adc_buff[enough];
+		sprintf(adc_buff, "%d", adc_output);
+		usart_prints(adc_buff);
+	}
 }
 
 // Set Asynchronous Normal Mode and configure BAUD Rate @ 9600
@@ -99,19 +108,16 @@ void receivedisable(){
 	UCSR0B = UCSR0B & (0<<RXEN0);
 }
 
-// Load one character into UDR0 for testing transfer
-void sendhi(){
-	UDR0 = 0x48;	// H
-	_delay_ms(20);
-	UDR0 = 0x69;	// i
-	_delay_ms(20);
-	UDR0 = 0x21;	// !
-	_delay_ms(20);  // Delays do weird stuff based on chosen compile method,
-				    //    so be careful. (Slide 17 + 27, CProgramming)
-	UDR0 = 0x0A;	// Newline
-	_delay_ms(20);
-	UDR0 = 0x0D;	// Carriage Return
-	_delay_ms(20);
+// Configure ADC
+void adc_init(){
+	ADMUX = ADMUX | (1<<REFS0); // Configure ADC Reference
+}
+
+unsigned int read_adc(){
+	PRR = PRR & (0<<PRADC);
+	ADCSRA = ADCSRA | (1<<ADSC);
+	while(ADCSRA & (1<<ADSC));
+	return ADCL | ADCH << 8;
 }
 
 void usart_prints(const char *sdata) {
