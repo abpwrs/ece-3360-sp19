@@ -50,7 +50,6 @@ int main(void)
 	
 	usart_init();
 	usart_prints(newline);
-	usart_prints(newline);
 
 	usart_prints(sdata);
 	int i = 0;
@@ -64,6 +63,7 @@ int main(void)
 
 	strrev(inputstring);
 	usart_prints(inputstring);
+	usart_prints(newline);
 
     while (1) 
     {
@@ -120,7 +120,7 @@ void usart_prints(const char *sdata) {
 		// the UDR0 is empty and can receive the next character (Slide 46, Serial Comm)
 		while (!(UCSR0A & (1<<UDRE0)));  // Option A
 		//while (!(UCSR0A & (1<<TXC0))); // Option B
-			UDR0 = *(sdata++);
+		UDR0 = *(sdata++);
 	}
 }
 
