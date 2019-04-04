@@ -28,7 +28,7 @@ void usart_printf();
 // ///////////////////
 
 
-//unsigned char tmp;				   // Compiler puts this in SRAM
+//unsigned char tmp; // puts this in SRAM
 //static const char fdata[] PROGMEM = "Flash Gordon\n";  // String in Flash (Storing in flash is broken and idk why? Compile type?)
 const char sdata[] = "Hello World!\n"; // String in SRAM 
 
@@ -38,8 +38,8 @@ int main(void)
 	
 	setbaud();
 	transmitenable();
-	//sendhi();
-	usart_prints(sdata);
+	sendhi();
+	//usart_prints(sdata);
 	//transmitdisable();
 	
     while (1) 
@@ -52,7 +52,6 @@ int main(void)
 void setbaud(){
 	UCSR0A = UCSR0A & ~(0x02);  // Set the mode to set "Async Normal Mode" (Slide 45 SerialComm)
 	UBRR0 = 0x33;				// UBRR0 = [8000000 / 16(9600)] - 1 = 51.083 (51?)
-	// Wait do I need returns... lol?
 }
 
 // Enable transmit TXEN0 bit in UCSR0b
@@ -67,10 +66,7 @@ void transmitdisable(){
 
 // Load one character into UDR0 for testing transfer
 void sendhi(){
-	UDR0 = 0x0A;	// Newline
-	_delay_ms(20);
-	UDR0 = 0x0D;	// Carriage Return
-	_delay_ms(20);
+
 	UDR0 = 0x48;	// H
 	_delay_ms(20);
 	UDR0 = 0x69;	// i
@@ -78,6 +74,10 @@ void sendhi(){
 	UDR0 = 0x21;	// !
 	_delay_ms(20);  // Delays do weird stuff based on chosen compile method,
 				    //    so be careful. (Slide 17 + 27, CProgramming)
+	UDR0 = 0x0A;	// Newline
+	_delay_ms(20);
+	UDR0 = 0x0D;	// Carriage Return
+	_delay_ms(20);
 }
 
 void usart_prints(const char *sdata) {
