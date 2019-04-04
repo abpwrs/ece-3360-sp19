@@ -20,42 +20,51 @@
 
 // Function Prototypes
 void setbaud();
-void transmitenable();
 void sendhi();
+// transmits
+void transmitenable();
 void transmitdisable();
+// prints 
 void usart_prints(const char*);
 void usart_printf();
+// receive
+void receiveenable();
+void receivedisable();
+// usart io
+unsigned char read_char_from_pc();
+void usart_init();
 // ///////////////////
 
 
 //unsigned char tmp; // puts this in SRAM
 //static const char fdata[] PROGMEM = "Flash Gordon\n";  // String in Flash (Storing in flash is broken and idk why? Compile type?)
-const char sdata[] = "Hello World!\n"; // String in SRAM 
+const char * sdata = "AB\n\r"; // String in SRAM 
 
 int main(void)
 {
 	// DDRC = 0x20;			 // sbi DDRC, 5 : PORTC 5 Output
 	
-	setbaud();
-	transmitenable();
-	sendhi();
-	//usart_prints(sdata);
-	//transmitdisable();
-	
+	usart_init();
+	//sendhi();
+	usart_prints(sdata);
+	//read_char_from_pc();
+
     while (1) 
     {
-		
+
     }
 }
 
 // Set Asynchronous Normal Mode and configure BAUD Rate @ 9600
-void setbaud(){
-	UCSR0A = UCSR0A & ~(0x02);  // Set the mode to set "Async Normal Mode" (Slide 45 SerialComm)
-	UBRR0 = 0x33;				// UBRR0 = [8000000 / 16(9600)] - 1 = 51.083 (51?)
+void usart_init(){
+	UCSR0A = UCSR0A & ~(0x02);        // Set the mode to set "Async Normal Mode" (Slide 45 SerialComm)
+	UCSR0B = (1<<RXEN0) | (1<<TXEN0); // set to transmit and receive
+	UBRR0 = 0x33;				      // UBRR0 = [8000000 / 16(9600)] - 1 = 51.083 (51?)
 }
 
 // Enable transmit TXEN0 bit in UCSR0b
 void transmitenable(){
+	receivedisable();
 	UCSR0B = UCSR0B | 0x08;		// Set TXEN0 (Bit 3) of UCSR0B
 }
 
@@ -64,9 +73,19 @@ void transmitdisable(){
 	UCSR0B = UCSR0B & ~(0x08);  // Clear TXEN0 (Bit 3) of UCSR0B
 }
 
+// Enable receive RXEN0 bit in UCSR0B
+void receiveenable(){
+	transmitdisable();
+	UCSR0B = UCSR0B | (1<<RXEN0);
+}
+
+// Disable receive RXEN0 bit in UCSR0B
+void receivedisable(){
+	UCSR0B = UCSR0B & (0<<RXEN0);
+}
+
 // Load one character into UDR0 for testing transfer
 void sendhi(){
-
 	UDR0 = 0x48;	// H
 	_delay_ms(20);
 	UDR0 = 0x69;	// i
@@ -84,9 +103,14 @@ void usart_prints(const char *sdata) {
 	while (*sdata) {
 		// Wait for UDRE0 to become set (==1), which indicates 
 		// the UDR0 is empty and can receive the next character (Slide 46, Serial Comm)
-		while (!(UCSR0A & (1<<UDRE0))){
-		//while (!(UCSR0A & (1<<TXC0))){
+		while (!(UCSR0A & (1<<UDRE0)));  // Option A
+		//while (!(UCSR0A & (1<<TXC0))); // Option B
 			UDR0 = *(sdata++);
-		}
+		//}
 	}
+}
+
+unsigned char read_char_from_pc(){
+	while (!(UCSR0A & (1<<RXC0)));
+	return UDR0;
 }
