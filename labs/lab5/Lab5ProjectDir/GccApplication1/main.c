@@ -1,31 +1,37 @@
-//////////////////////////////////////////////////////////////////////
+// ///////////////////////////////////////////////////////////////////
 // Assembly language file for Lab 5 in ECE:3360 (Embedded Systems)
 // Spring 2019, The University of Iowa.
 //
 // Desc: Lab 5 Analog Data Logging System
 //
 // Authors: B. Mitchinson, A. Powers
-//////////////////////////////////////////////////////////////////////
+// ///////////////////////////////////////////////////////////////////
 
+// Setting CPU Clock Speed
 #ifndef F_CPU
 #define F_CPU 8000000UL // 8 MHz -> CProgramming Notes, Slide 10
 #endif 
+// ///////////////////////
 
+// Required Imports
 #include <avr/io.h>
 #include <util/delay.h>
+// ////////////////
 
+// Function Prototypes
 void setbaud();
 void transmitenable();
 void sendhi();
 void transmitdisable();
+void usart_prints();
+void usart_printf();
+// ///////////////////
+
 
 unsigned char tmp;	 // Compiler puts this in SRAM
-
 int main(void)
 {
-    // unsigned char c;		 // Compiler puts this in SRAM
-	// unsigned char tmp;	 // Compiler puts this in SRAM
-	// DDRC = 0x20;			 // PORTC,5 Output (sbi DDRC, 5)
+	// DDRC = 0x20;			 // sbi DDRC, 5 : PORTC 5 Output
 	
 	setbaud();
 	transmitenable();
@@ -34,19 +40,7 @@ int main(void)
 	
     while (1) 
     {
-		// TODO: Polling logic to switch between send + receive	
 		
-		/////////////////////////////////////////////////////////////
-		//tmp = PORTC;		 // Get PortC
-		//tmp = tmp | 0x20;  // Set bit 5
-		//PORTC = tmp;		 // Update PortC (sbi PORTC,5)
-		//_delay_ms(300.0);	 // Delays do weird stuff based on compile method,
-							 //    so be careful. (Slide 17 + 27, CProgramming)
-
-		//tmp = PORTC;		 // Get PortC
-		//tmp = tmp & ~(0x20); // Clear bit 5
-		//PORTC = tmp;		 // Update PORTC,5 (cbi PORTC,5)
-		//_delay_ms(100.0);
     }
 }
 
@@ -89,5 +83,6 @@ void sendhi(){
 	_delay_ms(20);
 	tmp = 0x21; // !
 	UDR0 = tmp;
-	_delay_ms(20);
+	_delay_ms(20); // Delays do weird stuff based on compile method,
+				   //    so be careful. (Slide 17 + 27, CProgramming)
 }
