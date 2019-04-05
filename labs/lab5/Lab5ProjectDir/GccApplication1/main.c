@@ -37,17 +37,20 @@ void usart_init();
 // using the adc
 void adc_init();
 
-unsigned int read_adc();
+unsigned short read_adc();
+unsigned char read_command();
+void interpret_command(const char*, const char *);
 // ///////////////////
 
 
 //unsigned char tmp; // puts this in SRAM
 //static const char fdata[] PROGMEM = "Flash Gordon\n";  // String in Flash (Storing in flash is broken and idk why? Compile type?)
+const char * prompt_for_command = "Enter a command $> "; // String in SRAM
 const char * sdata = "Enter 4 characters to reverse:"; // String in SRAM
 const char * newline = "\n\r";
 const char * hi = "Hi!\n\r";
 char input;
-char inputstring[5] = "";
+char inputstring[9] = "";
 
 int main(void)
 {
@@ -55,9 +58,19 @@ int main(void)
 	
 	usart_init();
 	adc_init();
-
+	unsigned char command;
     while (1) 
     {
+		command = 0x00;
+		// command digits key
+		// invalid command
+		// invalid command --> 0x00
+		// M --> 0x01
+		// S:a,n,t --> 0x02
+		// R:a,n --> 0x03
+		// E:a,n,t,d --> 0x04
+		//command = read_command(inputstring);
+		//interpret_command(command, inputstring);
 		usart_prints(newline);
 		usart_prints(sdata);
 		int i = 0;
@@ -66,13 +79,13 @@ int main(void)
 			inputstring[i] = input;
 			i++;
 		}
-
 		strrev(inputstring);
 		usart_prints(newline);
 		usart_prints(inputstring);
+
 		usart_prints(newline);
-		unsigned int adc_output = read_adc();
-		int enough = (int) ((ceil(log10(adc_output))+1)*sizeof(char));
+		unsigned short adc_output = read_adc();
+		unsigned short enough = (unsigned short) ((ceil(log10(adc_output))+1)*sizeof(char));
 		char adc_buff[enough];
 		sprintf(adc_buff, "%d", adc_output);
 		usart_prints(adc_buff);
@@ -111,13 +124,13 @@ void receivedisable(){
 // Configure ADC
 void adc_init(){
 	ADMUX = ADMUX | (1<<REFS0); // Configure ADC Reference
+	ADCSRA = (1<<ADEN);
 }
 
-unsigned int read_adc(){
-	PRR = PRR & (0<<PRADC);
+unsigned short read_adc(){
 	ADCSRA = ADCSRA | (1<<ADSC);
-	while(ADCSRA & (1<<ADSC));
-	return ADCL | ADCH << 8;
+	while(ADCSRA & (1<<ADIF));
+	return ADCW;
 }
 
 void usart_prints(const char *sdata) {
@@ -134,3 +147,80 @@ unsigned char read_char_from_pc(){
 	while (!(UCSR0A & (1<<RXC0)));
 	return UDR0;
 }
+
+// command digits key
+// invalid command
+// invalid command --> 0x00
+// M --> 0x01
+// S:a,n,t --> 0x02
+// R:a,n --> 0x03
+// E:a,n,t,d --> 0x04
+void interpret_command(const char * command_code, const char * command_string){
+	usart_prints(newline);
+	usart_prints(newline);
+	usart_prints("Command was: ");
+	usart_prints(newline);
+	usart_prints(command_string);
+	usart_prints(newline);
+	usart_prints(newline);
+	
+}
+
+// command digits key
+// invalid command
+// invalid command --> 0x00
+// M --> 0x01
+// S:a,n,t --> 0x02
+// R:a,n --> 0x03
+// E:a,n,t,d --> 0x04
+unsigned char read_command(char * command_array){
+	usart_prints(newline);
+	usart_prints(prompt_for_command);
+	command_array = "";
+
+	unsigned char first_char = "";
+	first_char = read_char_from_pc();
+
+	unsigned short max_command_length = 0x00;
+	unsigned short ret_code = 0x00;
+
+	if (first_char == 'M') {
+		command_array[0] = first_char;
+		max_command_length = 0x00;
+		ret_code = 0x01;
+	} else if (first_char == 'S') {
+		command_array[0] = first_char;
+		max_command_length = 0x07;
+		ret_code = 0x02;
+
+	} else if (first_char == 'R') {
+		command_array[0] = first_char;
+		max_command_length = 0x05;
+		ret_code = 0x03;
+
+	} else if (first_char == 'E') {
+		command_array[0] = first_char;
+		max_command_length = 0x09;
+		ret_code = 0x04;
+	}	 
+
+	for (int i = 1; i < max_command_length; ++i) {
+		command_array[i] = read_char_from_pc();
+	}
+
+	return ret_code;
+}
+
+
+
+// OLD CODE --> reverse string
+// const char * sdata = "Enter 4 characters to reverse:"; // String in SRAM
+//		int i = 0;
+//		while (i < 4){
+//			input = read_char_from_pc();
+//			inputstring[i] = input;
+//			i++;
+//		}
+//		strrev(inputstring);
+//		usart_prints(newline);
+//		usart_prints(inputstring);
