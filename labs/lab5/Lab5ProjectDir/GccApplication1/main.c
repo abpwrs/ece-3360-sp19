@@ -28,6 +28,7 @@ void transmitdisable();
 // prints 
 void usart_prints(const char*);
 void usart_printf();
+void print_new_line();
 // receive
 void receiveenable();
 void receivedisable();
@@ -37,20 +38,11 @@ void usart_init();
 // using the adc
 void adc_init();
 
-unsigned short read_adc();
-unsigned char read_command();
-void interpret_command(const char*, const char *);
+
+int read_adc();
+unsigned int read_command(char * command_array, size_t arr_len);
+void interpret_command(const int, const char *);
 // ///////////////////
-
-
-//unsigned char tmp; // puts this in SRAM
-//static const char fdata[] PROGMEM = "Flash Gordon\n";  // String in Flash (Storing in flash is broken and idk why? Compile type?)
-const char * prompt_for_command = "Enter a command $> "; // String in SRAM
-const char * sdata = "Enter 4 characters to reverse:"; // String in SRAM
-const char * newline = "\n\r";
-const char * hi = "Hi!\n\r";
-char input;
-char inputstring[9] = "";
 
 int main(void)
 {
@@ -58,7 +50,9 @@ int main(void)
 	
 	usart_init();
 	adc_init();
-	unsigned char command;
+	const size_t arr_len = 9;
+	char inputstring[arr_len];
+	unsigned int command;
     while (1) 
     {
 		command = 0x00;
@@ -69,26 +63,8 @@ int main(void)
 		// S:a,n,t --> 0x02
 		// R:a,n --> 0x03
 		// E:a,n,t,d --> 0x04
-		//command = read_command(inputstring);
-		//interpret_command(command, inputstring);
-		usart_prints(newline);
-		usart_prints(sdata);
-		int i = 0;
-		while (i < 4){
-			input = read_char_from_pc();
-			inputstring[i] = input;
-			i++;
-		}
-		strrev(inputstring);
-		usart_prints(newline);
-		usart_prints(inputstring);
-
-		usart_prints(newline);
-		unsigned short adc_output = read_adc();
-		unsigned short enough = (unsigned short) ((ceil(log10(adc_output))+1)*sizeof(char));
-		char adc_buff[enough];
-		sprintf(adc_buff, "%d", adc_output);
-		usart_prints(adc_buff);
+		command = read_command(inputstring, arr_len);
+		interpret_command(command, inputstring);
 	}
 }
 
@@ -99,26 +75,14 @@ void usart_init(){
 	UBRR0 = 0x33;				      // UBRR0 = [8000000 / 16(9600)] - 1 = 51.083 (51?)
 }
 
-// Enable transmit TXEN0 bit in UCSR0b
-void transmitenable(){
-	receivedisable();
-	UCSR0B = UCSR0B | 0x08;		// Set TXEN0 (Bit 3) of UCSR0B
-}
-
-// Disable transmit TXEN0 bit in UCSR0b
-void transmitdisable(){
-	UCSR0B = UCSR0B & ~(0x08);  // Clear TXEN0 (Bit 3) of UCSR0B
-}
-
-// Enable receive RXEN0 bit in UCSR0B
-void receiveenable(){
-	transmitdisable();
-	UCSR0B = UCSR0B | (1<<RXEN0);
-}
-
-// Disable receive RXEN0 bit in UCSR0B
-void receivedisable(){
-	UCSR0B = UCSR0B & (0<<RXEN0);
+void usart_prints(const char *sdata) {
+	while (*sdata) {
+		// Wait for UDRE0 to become set (==1), which indicates
+		// the UDR0 is empty and can receive the next character (Slide 46, Serial Comm)
+		while (!(UCSR0A & (1<<UDRE0)));  // Option A
+		//while (!(UCSR0A & (1<<TXC0))); // Option B
+		UDR0 = *(sdata++);
+	}
 }
 
 // Configure ADC
@@ -127,20 +91,16 @@ void adc_init(){
 	ADCSRA = (1<<ADEN);
 }
 
-unsigned short read_adc(){
+int read_adc(){
 	ADCSRA = ADCSRA | (1<<ADSC);
 	while(ADCSRA & (1<<ADIF));
-	return ADCW;
-}
-
-void usart_prints(const char *sdata) {
-	while (*sdata) {
-		// Wait for UDRE0 to become set (==1), which indicates 
-		// the UDR0 is empty and can receive the next character (Slide 46, Serial Comm)
-		while (!(UCSR0A & (1<<UDRE0)));  // Option A
-		//while (!(UCSR0A & (1<<TXC0))); // Option B
-		UDR0 = *(sdata++);
+	short tmp = ADCW;
+	int voltage = tmp;
+	voltage *= 5;
+	if (voltage > 5000){
+		voltage = 5000;
 	}
+	return voltage;
 }
 
 unsigned char read_char_from_pc(){
@@ -148,22 +108,8 @@ unsigned char read_char_from_pc(){
 	return UDR0;
 }
 
-// command digits key
-// invalid command
-// invalid command --> 0x00
-// M --> 0x01
-// S:a,n,t --> 0x02
-// R:a,n --> 0x03
-// E:a,n,t,d --> 0x04
-void interpret_command(const char * command_code, const char * command_string){
-	usart_prints(newline);
-	usart_prints(newline);
-	usart_prints("Command was: ");
-	usart_prints(newline);
-	usart_prints(command_string);
-	usart_prints(newline);
-	usart_prints(newline);
-	
+void print_new_line(){
+	usart_prints( "\n\r");
 }
 
 // command digits key
@@ -173,36 +119,87 @@ void interpret_command(const char * command_code, const char * command_string){
 // S:a,n,t --> 0x02
 // R:a,n --> 0x03
 // E:a,n,t,d --> 0x04
-unsigned char read_command(char * command_array){
-	usart_prints(newline);
-	usart_prints(prompt_for_command);
-	command_array = "";
+void interpret_command(const int command_code, const char * command_string){
+	//print_new_line();
+	//usart_prints("Command was: ");
+	//print_new_line();
+	//usart_prints(command_string);
+	//print_new_line();
+	//print_new_line();
+	switch (command_code){
+		case 1: ;
+			int adc_output;
+			adc_output = read_adc();
 
-	unsigned char first_char = "";
+			char adc_buff[9];
+
+			sprintf(adc_buff, "v=%d.%d V", adc_output/1000,adc_output%1000 );
+			print_new_line();
+			usart_prints(adc_buff);
+			print_new_line();
+
+			break;
+		case 2:
+			break;
+		case 3:
+			break;
+		case 4 :
+			break;	
+	}
+
+}
+
+// command digits key
+// invalid command
+// invalid command --> 0x00
+// M --> 0x01
+// S:a,n,t --> 0x02
+// R:a,n --> 0x03
+// E:a,n,t,d --> 0x04
+unsigned int read_command(char * command_array, size_t arr_len){
+	print_new_line();
+	usart_prints("Enter a command $> ");
+	// reset command_array
+	for(int i = 0; i < arr_len; ++i){
+		command_array[i] = " ";
+	}
+
+	unsigned char first_char = " ";
 	first_char = read_char_from_pc();
 
 	unsigned short max_command_length = 0x00;
-	unsigned short ret_code = 0x00;
+	unsigned int ret_code = 0x00;
 
-	if (first_char == 'M') {
-		command_array[0] = first_char;
-		max_command_length = 0x00;
-		ret_code = 0x01;
-	} else if (first_char == 'S') {
-		command_array[0] = first_char;
-		max_command_length = 0x07;
-		ret_code = 0x02;
+	switch (first_char) {
+		case 'M': 
+			command_array[0] = first_char;
+			max_command_length = 0x00;
+			ret_code = 0x01;
+			break;
 
-	} else if (first_char == 'R') {
-		command_array[0] = first_char;
-		max_command_length = 0x05;
-		ret_code = 0x03;
+		case 'S':
+			command_array[0] = first_char;
+			max_command_length = 0x07;
+			ret_code = 0x02;
+			break;
 
-	} else if (first_char == 'E') {
-		command_array[0] = first_char;
-		max_command_length = 0x09;
-		ret_code = 0x04;
-	}	 
+		case 'R':
+			command_array[0] = first_char;
+			max_command_length = 0x05;
+			ret_code = 0x03;
+			break;
+
+		case 'E':
+			command_array[0] = first_char;
+			max_command_length = 0x09;
+			ret_code = 0x04;
+			break;
+
+		default:
+			print_new_line();
+			usart_prints("Error: Invalid Command!!");
+			print_new_line();
+	}
 
 	for (int i = 1; i < max_command_length; ++i) {
 		command_array[i] = read_char_from_pc();
@@ -222,5 +219,5 @@ unsigned char read_command(char * command_array){
 //			i++;
 //		}
 //		strrev(inputstring);
-//		usart_prints(newline);
+//		print_new_line();
 //		usart_prints(inputstring);
