@@ -17,6 +17,8 @@
 #include <avr/io.h>
 #include <util/delay.h>
 #include <stdio.h>
+#include <avr/interrupt.h>
+#include <avr/eeprom.h>
 // ////////////////
 
 // Function Prototypes
@@ -53,7 +55,16 @@ int main(void)
 	const size_t arr_len = 9;
 	char inputstring[arr_len];
 	unsigned int command;
-    while (1) 
+
+    eeprom_write_word(0x00, 4387);
+	int result = eeprom_read_word(0x00);
+	char thingy[20];
+	sprintf(thingy, "Got: %d", result);
+	usart_prints(thingy);
+
+	print_new_line();
+
+	while (1) 
     {
 		command = 0x00;
 		// command digits key
@@ -65,6 +76,9 @@ int main(void)
 		// E:a,n,t,d --> 0x04
 		command = read_command(inputstring, arr_len);
 		interpret_command(command, inputstring);
+		char t_buff[10];
+		sprintf(t_buff, "%d", sizeof(5000));
+		usart_prints(t_buff);
 	}
 }
 
@@ -120,19 +134,11 @@ void print_new_line(){
 // R:a,n --> 0x03
 // E:a,n,t,d --> 0x04
 void interpret_command(const int command_code, const char * command_string){
-	//print_new_line();
-	//usart_prints("Command was: ");
-	//print_new_line();
-	//usart_prints(command_string);
-	//print_new_line();
-	//print_new_line();
 	switch (command_code){
 		case 1: ;
 			int adc_output;
 			adc_output = read_adc();
-
 			char adc_buff[9];
-
 			sprintf(adc_buff, "v=%d.%d V", adc_output/1000,adc_output%1000 );
 			print_new_line();
 			usart_prints(adc_buff);
@@ -208,7 +214,28 @@ unsigned int read_command(char * command_array, size_t arr_len){
 	return ret_code;
 }
 
+void store_EEPROM(char addr){
+	cli();
+	
+	//int data = read_adc();
+	int data = 5000;
 
+	while(EECR & (1<<EEPE)); // Wait until EEPE is zero
+	EEARH = 0x00; // Writing the high address location
+	EEARL = 0x00; // Writing the high address location
+	EEDR = 0x07;
+	EECR &= ~(1<<EEPM0);
+	EECR &= ~(1<<EEPM1);    // Clear EEPM1 and 0 (4th + 5th)
+	asm volatile(
+		"cbi EECR,1" "\n\t"
+		"sbi EECR,2" "\n\t"
+		"sbi EECR,1" "\n\t"
+	::);
+
+	sei();
+}
+
+char retrieve_EEPROM(){}
 
 // OLD CODE --> reverse string
 // const char * sdata = "Enter 4 characters to reverse:"; // String in SRAM
