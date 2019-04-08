@@ -39,10 +39,10 @@ unsigned int read_command(char *, size_t);
 void interpret_command(const char *);
 
 void execute_M(); // M don't care about your args
-void execute_R(int *, int *);
-void execute_S(int *, int *, int *);
-void execute_E(int *, int *, int *, int *);
-char parse_args(const char *, int *, int *, int *, int *);
+void execute_R(int *);
+void execute_S(int *);
+void execute_E(int *);
+void parse_args(const char *, int *);
 
 // our EEPROM methods (avoiding interrupts)
 void my_eeprom_write_word(uint16_t, uint16_t);
@@ -54,13 +54,14 @@ int main(void)
 {
 	usart_init();
 	adc_init();
-	const size_t arr_len = 9;  // max length of a command
+	const size_t arr_len = 14;  // max length of a command
 	char inputstring[arr_len]; // input string to hold commands
 	unsigned int command_code;
 
 	while (1)
 	{
 		command_code = read_command(inputstring, arr_len);
+		print_single_line_message(inputstring);
 		if (command_code != 0x00)
 		{
 			interpret_command(inputstring);
@@ -129,9 +130,11 @@ int read_adc()
 // ///////////////////////////////////////////////////////////////////
 void interpret_command(const char *command_string)
 {
-	int a, n, t, d;
-	char failure;
-	failure = parse_args(command_string, &a, &n, &t, &d);
+	//int a, n, t, d;
+	int param_arr[4];
+	char failure = 0x00;
+	parse_args(command_string, param_arr);
+	//failure = INPUT VALIDATION
 	if (failure == 0x01)
 	{
 		print_single_line_message("Failure to Parse!");
@@ -144,66 +147,64 @@ void interpret_command(const char *command_string)
 			execute_M();
 			break;
 		case 'S':
-			execute_S(&a, &n, &t);
+			execute_S(param_arr);
 			break;
 		case 'R':
-			execute_R(&a, &n);
+			execute_R(param_arr);
 			break;
 		case 'E':
-			execute_E(&a, &n, &t, &d);
+			execute_E(param_arr);
 			break;
 		}
 	}
+
+
+	//char buff[20];
+	//for(int i=0; i<15; ++i){
+		//buff[i] ='\0';
+	//}
+	//sprintf(buff, "%d %d %d %d", param_arr[0],param_arr[1],param_arr[2],param_arr[3]);
+    //print_single_line_message(buff);
+
+	
 }
 
 // parse args --> the return code can be passed by ref to reduce mem usage
 // ///////////////////////////////////////////////////////////////////
-char parse_args(const char *command, int *a, int *n, int *t, int *d)
+void parse_args(const char *command, int *arr)
 {
-	if (command[0]=='M'){
-		return 0x00;
+	for (int i = 0; i<4; ++i){
+		arr[i] = 1;
 	}
+	if(command[0] != 'M'){
+		unsigned int param_count = 0;
+		unsigned int command_index = 1;
+		char param[3];
+		unsigned int param_index = 0;
 
-	*a = atoi(command[2]);
-	*n = atoi(command[4]);
+		do {
+			command_index += 1;
 
-	// repeated range checks should be a function
-	if (*a < 0 || *a > 510){
-		print_single_line_message("0 =< a =< 510");
-		return 0x01;
-	}
+			if(command[command_index] == ',' || command[command_index] == '\0'){
+				// save param
+				arr[param_count] = atoi(param);
+				param_count += 1;
 
-	if (*n < 1 || *n > 20){
-		print_single_line_message("1 =< n =< 20");
-		return 0x01;
-	}
+				// reset param
+				param_index=0;
+				for(int i=0; i<3; ++i){
+					param[i] = '\0';
+				}
 
-	if (command[0] != 'R')
-	{
-		t = atoi(command[6]);
-		if (*t < 1 || *t > 10){
-		print_single_line_message("1 =< t =< 10");
-		return 0x01;
+			} else{
+				// add to param buffer
+				param[param_index] = command[command_index];
+				param_index += 1;
+			}
+		} while (command[command_index] != '\0');
 	}
-	}
-	else
-	{
-		*t = 0;
-	}
-	if (command[0] == 'E')
-	{
-		*d = atoi(command[8]);
-		if (*d < 0 || *d > 1){
-			print_single_line_message("0 =< t =< 1");
-			return 0x01;
-		}
-	}
-	else
-	{
-		*d = 0;
-	}
-	return 0x00;
 }
+
 // ///////////////////////////////////////////////////////////////////
 
 // specific functions for each sub-command
@@ -225,7 +226,7 @@ void execute_M()
 // S
 // ///////////////////////////////////////////////////////////////////
 // TODO: implement S functionality
-void execute_S(int *a, int *n, int *t)
+void execute_S(int *arr)
 {
 }
 
@@ -234,7 +235,7 @@ void execute_S(int *a, int *n, int *t)
 // R
 // ///////////////////////////////////////////////////////////////////
 // TODO: implement R functionality
-void execute_R(int *a, int *n)
+void execute_R(int *arr)
 {
 }
 // ///////////////////////////////////////////////////////////////////
@@ -242,7 +243,7 @@ void execute_R(int *a, int *n)
 // E
 // ///////////////////////////////////////////////////////////////////
 // TODO: implement E functionality
-void execute_E(int *a, int *n, int *t, int *d)
+void execute_E(int *arr)
 {
 }
 // ///////////////////////////////////////////////////////////////////
@@ -283,7 +284,7 @@ unsigned int read_command(char *command_array, size_t arr_len)
 	// reset command_array
 	for (int i = 0; i < arr_len; ++i)
 	{
-		command_array[i] = " ";
+		command_array[i] = "\0";
 	}
 
 	unsigned char first_char = " ";
@@ -291,26 +292,23 @@ unsigned int read_command(char *command_array, size_t arr_len)
 
 	unsigned short max_command_length = 0x00;
 	unsigned int ret_code = 0x00;
+	command_array[0] = first_char;
 
 	switch (first_char)
 	{
 	case 'M':
-		command_array[0] = first_char;
 		ret_code = 1;
 		break;
 
 	case 'S':
-		command_array[0] = first_char;
 		ret_code = 2;
 		break;
 
 	case 'R':
-		command_array[0] = first_char;
 		ret_code = 3;
 		break;
 
 	case 'E':
-		command_array[0] = first_char;
 		ret_code = 4;
 		break;
 
@@ -319,26 +317,16 @@ unsigned int read_command(char *command_array, size_t arr_len)
 	}
 
 	max_command_length = CODE_TO_LENGTH[ret_code];
-	unsigned int curr_read = 1;
-	unsigned char done = 0x00;
 	char curr_char;
-	while(curr_read < max_command_length && done != 0x01){
+	unsigned int curr_read = 1;
+	while(curr_read < max_command_length && curr_char != '\r'){
 		curr_char = read_char_from_pc();
-		if (curr_char == '\r'){
-
-		} else if (curr_char == ','){
-
+		if (curr_char != '\r')
+		{
+			command_array[curr_read] = curr_char;
 		}
-		
+		curr_read += 1;
 	}
-
-
-
-	for (int i = 1; i < max_command_length; ++i)
-	{
-		command_array[i] = read_char_from_pc();
-	}
-
 	return ret_code;
 
 } // Reading from serial input
@@ -388,3 +376,44 @@ void print_single_line_message(const char *message)
 // sprintf(thingy, "Got: %d", result);
 // usart_prints(thingy);
 // print_new_line();
+
+
+
+	//if (command[0]=='M'){
+		//return 0x00;
+	//}
+//
+	//*a = atoi(command[2]);
+	//*n = atoi(command[4]);
+//
+	//// repeated range checks should be a function
+	//if (*a < 0 || *a > 510){
+		//print_single_line_message("0 =< a =< 510");
+		//return 0x01;
+	//}
+//
+	//if (*n < 1 || *n > 20){
+		//print_single_line_message("1 =< n =< 20");
+		//return 0x01;
+	//}
+//
+	//if (command[0] != 'R')
+	//{
+		//t = atoi(command[6]);
+		//if (*t < 1 || *t > 10){
+		//print_single_line_message("1 =< t =< 10");
+		//return 0x01;
+	//}
+	//}
+	//else
+	//{
+		//*t = 0;
+	//}
+	//if (command[0] == 'E')
+	//{
+		//*d = atoi(command[8]);
+		//if (*d < 0 || *d > 1){
+			//print_single_line_message("0 =< t =< 1");
+			//return 0x01;
+		//}
+	//}
