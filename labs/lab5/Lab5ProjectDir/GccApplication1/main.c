@@ -51,10 +51,7 @@ void parse_args(const char *, int *, int *, int *, int *);
 void my_eeprom_write_word(uint16_t, uint16_t);
 uint16_t my_eeprom_read_word(uint16_t);
 
-// CONST values
-// ///////////////////
-const int CODE_TO_LENGTH[5] = {0, 0, 7, 5, 9};
-// ///////////////////
+
 
 int main(void)
 {
@@ -136,33 +133,57 @@ int read_adc()
 void interpret_command(const char *command_string)
 {
 	int a, n, t, d;
-	parse_args(command_string, &a, &n, &t, &d);
-	switch (command_string[0])
+	char failure;
+	failure = parse_args(command_string, &a, &n, &t, &d);
+	if (failure == 0x01)
 	{
-	case 'M':
-		execute_M();
-		break;
-	case 'S':
-		execute_S(&a, &n, &t);
-		break;
-	case 'R':
-		execute_R(&a, &n);
-		break;
-	case 'E':
-		execute_E(&a, &n, &t, &d);
-		break;
+		print_single_line_message("Failure to Parse!")
+	}
+	else
+	{
+		switch (command_string[0])
+		{
+		case 'M':
+			execute_M();
+			break;
+		case 'S':
+			execute_S(&a, &n, &t);
+			break;
+		case 'R':
+			execute_R(&a, &n);
+			break;
+		case 'E':
+			execute_E(&a, &n, &t, &d);
+			break;
+		}
 	}
 }
 
-// parse args
+// parse args --> the return code can be passed by ref to reduce mem usage
 // ///////////////////////////////////////////////////////////////////
-void parse_args(const char *command, int *a, int *n, int *t, int *d)
+char parse_args(const char *command, int *a, int *n, int *t, int *d)
 {
-	*a = atoi(command[2]);
+	*a = atoi(command[2s]);
 	*n = atoi(command[4]);
+
+	// repeated range checks should be a function
+	if (a < 0 || a > 510){
+		print_single_line_message("0 =< a =< 510");
+		return 0x01;
+	}
+
+	if (n < 1 || n > 20){
+		print_single_line_message("1 =< n =< 20");
+		return 0x01;
+	}
+
 	if (command[0] != 'R')
 	{
 		*t = atoi(command[6]);
+		if (t < 1 || t > 10){
+		print_single_line_message("1 =< t =< 10");
+		return 0x01;
+	}
 	}
 	else
 	{
@@ -171,11 +192,17 @@ void parse_args(const char *command, int *a, int *n, int *t, int *d)
 	if (command[0] == 'E')
 	{
 		*d = atoi(command[8])
+		if (n < 0 || n > 1){
+			print_single_line_message("0 =< n =< 1");
+			return 0x01;
+		}
+	}
 	}
 	else
 	{
 		*d = 0;
 	}
+	return 0x00;
 }
 // ///////////////////////////////////////////////////////////////////
 
@@ -251,6 +278,8 @@ unsigned int read_command(char *command_array, size_t arr_len)
 {
 	print_new_line();
 	usart_prints("Enter a command $> ");
+	const int CODE_TO_LENGTH[5] = {0, 0, 7, 5, 9}; // IF WE RUN INTO MEM TROUBLE REMOVE THIS
+
 	// reset command_array
 	for (int i = 0; i < arr_len; ++i)
 	{
