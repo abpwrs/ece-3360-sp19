@@ -1,0 +1,9 @@
+S:0,20,10
+
+Timer: (scaled to one second on overflow -> triggers ISR)
+
+ISR: Called every second
+* Updates T_CURRENT to compair to T_END
+* Upon T_END = T_CURRENT
+** Take the sample -> store it
+** reset T_END, N_CURRENT++

@@ -48,7 +48,28 @@ void parse_args(const char *, int *);
 void my_eeprom_write_word(uint16_t, uint16_t);
 uint16_t my_eeprom_read_word(uint16_t);
 
+// Global timer variables
+volatile int T_END = 0;
+volatile int T_CURRENT = 0;
+volatile int N_END = 0;
+volatile int N_CURRENT = 0;
+volatile char STORE_IN_PROG = 0x00;
 
+// Timer configuration
+void timer1_init(){
+	TCCR1A |= ();
+	TCCR1B |= (1<<CS12);
+
+}
+
+ISR(TIMER1_OVF_vect) {
+	//ISR: Called every second
+	//* Updates T_CURRENT to compare to T_END
+	//* Upon T_END = T_CURRENT
+	//** Take the sample -> store it (address++)
+	//** reset T_END, N_CURRENT++
+	//** When N_CURRENT = N_END, turn off timer
+}
 
 int main(void)
 {
@@ -132,9 +153,9 @@ void interpret_command(const char *command_string)
 {
 	//int a, n, t, d;
 	int param_arr[4];
-	char failure = 0x00;
+	char failure;
 	parse_args(command_string, param_arr);
-	//failure = INPUT VALIDATION
+	failure = 0x00; //INPUT VALIDATION
 	if (failure == 0x01)
 	{
 		print_single_line_message("Failure to Parse!");
