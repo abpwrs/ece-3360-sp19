@@ -28,9 +28,6 @@ void usart_prints(const char *);
 void usart_printf();
 void print_new_line();
 void print_single_line_message(const char *);
-// receive
-void receiveenable();
-void receivedisable();
 // usart io
 unsigned char read_char_from_pc();
 void usart_init();
@@ -45,7 +42,7 @@ void execute_M(); // M don't care about your args
 void execute_R(int *, int *);
 void execute_S(int *, int *, int *);
 void execute_E(int *, int *, int *, int *);
-void parse_args(const char *, int *, int *, int *, int *);
+char parse_args(const char *, int *, int *, int *, int *);
 
 // our EEPROM methods (avoiding interrupts)
 void my_eeprom_write_word(uint16_t, uint16_t);
@@ -66,7 +63,7 @@ int main(void)
 		command_code = read_command(inputstring, arr_len);
 		if (command_code != 0x00)
 		{
-			interpret_command(command_code, inputstring);
+			interpret_command(inputstring);
 		}
 	}
 }
@@ -137,7 +134,7 @@ void interpret_command(const char *command_string)
 	failure = parse_args(command_string, &a, &n, &t, &d);
 	if (failure == 0x01)
 	{
-		print_single_line_message("Failure to Parse!")
+		print_single_line_message("Failure to Parse!");
 	}
 	else
 	{
@@ -163,24 +160,28 @@ void interpret_command(const char *command_string)
 // ///////////////////////////////////////////////////////////////////
 char parse_args(const char *command, int *a, int *n, int *t, int *d)
 {
-	*a = atoi(command[2s]);
+	if (command[0]=='M'){
+		return 0x00;
+	}
+
+	*a = atoi(command[2]);
 	*n = atoi(command[4]);
 
 	// repeated range checks should be a function
-	if (a < 0 || a > 510){
+	if (*a < 0 || *a > 510){
 		print_single_line_message("0 =< a =< 510");
 		return 0x01;
 	}
 
-	if (n < 1 || n > 20){
+	if (*n < 1 || *n > 20){
 		print_single_line_message("1 =< n =< 20");
 		return 0x01;
 	}
 
 	if (command[0] != 'R')
 	{
-		*t = atoi(command[6]);
-		if (t < 1 || t > 10){
+		t = atoi(command[6]);
+		if (*t < 1 || *t > 10){
 		print_single_line_message("1 =< t =< 10");
 		return 0x01;
 	}
@@ -191,12 +192,11 @@ char parse_args(const char *command, int *a, int *n, int *t, int *d)
 	}
 	if (command[0] == 'E')
 	{
-		*d = atoi(command[8])
-		if (n < 0 || n > 1){
-			print_single_line_message("0 =< n =< 1");
+		*d = atoi(command[8]);
+		if (*d < 0 || *d > 1){
+			print_single_line_message("0 =< t =< 1");
 			return 0x01;
 		}
-	}
 	}
 	else
 	{
@@ -209,7 +209,7 @@ char parse_args(const char *command, int *a, int *n, int *t, int *d)
 // specific functions for each sub-command
 // M
 // ///////////////////////////////////////////////////////////////////
-char execute_M()
+void execute_M()
 {
 	int adc_output;
 	adc_output = read_adc();
@@ -242,7 +242,7 @@ void execute_R(int *a, int *n)
 // E
 // ///////////////////////////////////////////////////////////////////
 // TODO: implement E functionality
-char execute_E(int *a, int *n, int *t, int *d)
+void execute_E(int *a, int *n, int *t, int *d)
 {
 }
 // ///////////////////////////////////////////////////////////////////
@@ -278,7 +278,7 @@ unsigned int read_command(char *command_array, size_t arr_len)
 {
 	print_new_line();
 	usart_prints("Enter a command $> ");
-	const int CODE_TO_LENGTH[5] = {0, 0, 7, 5, 9}; // IF WE RUN INTO MEM TROUBLE REMOVE THIS
+	const int CODE_TO_LENGTH[5] = {0, 0, 11, 8, 13}; // IF WE RUN INTO MEM TROUBLE REMOVE THIS
 
 	// reset command_array
 	for (int i = 0; i < arr_len; ++i)
@@ -319,6 +319,20 @@ unsigned int read_command(char *command_array, size_t arr_len)
 	}
 
 	max_command_length = CODE_TO_LENGTH[ret_code];
+	unsigned int curr_read = 1;
+	unsigned char done = 0x00;
+	char curr_char;
+	while(curr_read < max_command_length && done != 0x01){
+		curr_char = read_char_from_pc();
+		if (curr_char == '\r'){
+
+		} else if (curr_char == ','){
+
+		}
+		
+	}
+
+
 
 	for (int i = 1; i < max_command_length; ++i)
 	{
