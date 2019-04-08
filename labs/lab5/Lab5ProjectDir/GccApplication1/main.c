@@ -34,6 +34,7 @@ void usart_init();
 // using the adc
 void adc_init();
 int read_adc();
+int check_bounds(int);
 // command interp
 unsigned int read_command(char *, size_t);
 void interpret_command(const char *);
@@ -67,7 +68,7 @@ volatile char STORE_IN_PROG = 0x00;
 
 // Timer configuration
 void timer1_init(){
-	TCCR1A |= ();
+	//TCCR1A |= ();
 	TCCR1B |= (1<<CS12);
 
 }
@@ -147,6 +148,15 @@ int read_adc()
 	}
 	return voltage;
 }
+int check_bounds(int voltage){
+	if (voltage < 0){
+		voltage = 0;
+	} else if (voltage > 5000){
+		voltage = 0;
+	}
+	return voltage;
+}
+
 // ///////////////////////////////////////////////////////////////////
 
 // command digits key
@@ -160,11 +170,10 @@ int read_adc()
 // ///////////////////////////////////////////////////////////////////
 void interpret_command(const char *command_string)
 {
-	//int a, n, t, d;
 	int param_arr[4];
 	char failure;
 	parse_args(command_string, param_arr);
-	failure = validate_input(param_arr); //INPUT VALIDATION
+	failure = validate_input(param_arr);
 	if (failure == 0x01)
 	{
 		print_single_line_message("Failure to Parse!");
@@ -187,16 +196,6 @@ void interpret_command(const char *command_string)
 			break;
 		}
 	}
-
-
-	//char buff[20];
-	//for(int i=0; i<15; ++i){
-		//buff[i] ='\0';
-	//}
-	//sprintf(buff, "%d %d %d %d", param_arr[0],param_arr[1],param_arr[2],param_arr[3]);
-    //print_single_line_message(buff);
-
-	
 }
 
 // INPUT VALIDATION:
@@ -206,8 +205,11 @@ char validate_input(int * params){
 	ret_val |= check_param(params[1], 1, 20, "1 =< n =< 20");
 	ret_val |= check_param(params[2], 1, 10, "1 =< t =< 10");
 	ret_val |= check_param(params[3], 1, 1, "0 =< d =< 1");
+	if (params[0] + (2*params[1]) > 510){
+		ret_val = 0x01;
+		print_single_line_message("a + (2 * n) <= 510");
+	}
 	return ret_val;
-
 }
 
 char check_param(int value, int min_v, int max_v, char * message){
@@ -238,13 +240,11 @@ void parse_args(const char *command, int *arr)
 				// save param
 				arr[param_count] = atoi(param);
 				param_count += 1;
-
 				// reset param
 				param_index=0;
 				for(int i=0; i<3; ++i){
 					param[i] = '\0';
 				}
-
 			} else{
 				// add to param buffer
 				param[param_index] = command[command_index];
@@ -262,10 +262,10 @@ void parse_args(const char *command, int *arr)
 void execute_M()
 {
 	int adc_output;
-	adc_output = read_adc();
+	adc_output = check_bounds(read_adc());
 	char adc_buff[10];
 	sprintf(adc_buff, "v=%d.%d V", adc_output / 1000, adc_output % 1000);
-	print_single_line_message(adc_buff)
+	print_single_line_message(adc_buff);
 }
 // ///////////////////////////////////////////////////////////////////
 
@@ -274,24 +274,49 @@ void execute_M()
 // TODO: implement S functionality
 void execute_S(int *params)
 {
-	if (STORE_IN_PROG){
-		print_single_line_message("Error: store already in progress!");
-	}else{
-		// start ISR timer1
-		// timer1_init();
-		// the rest of the storage is handled by ISR(TIMER1_OVF_vect)
 
-		// blocking store
-		int adc_val;
-		for(int current_n = 0; current_n < params[1]; ++current_n){
-			adc_val = read_adc();
-			my_eeprom_write_word(params[0] + (current_n * 2), adc_val)
-			// diagnostic print
-			char adc_buff[25];
-			sprintf(adc_buff, "Storing v=%d.%d V at %d", adc_output / 1000, adc_output % 1000, params[0] + (current_n * 2));
-			print_single_line_message(adc_buff)
-			_delay_ms(params[2]*1000);
+	// blocking store
+	int adc_val;
+	for(int current_n = 0; current_n < params[1]; ++current_n){
+		adc_val = check_bounds(read_adc());
+		my_eeprom_write_word(params[0] + (current_n * 2), adc_val);
+		// diagnostic print
+		char adc_buff[25];
+		sprintf(adc_buff, "Storing v=%d.%d V at %d", adc_val / 1000, adc_val % 1000, params[0] + (current_n * 2));
+		print_single_line_message(adc_buff);
+		switch(params[2]){
+		case 1:
+		_delay_ms(1000);
+		break;
+		case 2:
+		_delay_ms(2000);
+		break;
+		case 3:
+		_delay_ms(3000);
+		break;
+		case 4:
+		_delay_ms(4000);
+		break;
+		case 5:
+		_delay_ms(5000);
+		break;
+		case 6:
+		_delay_ms(6000);
+		break;
+		case 7:
+		_delay_ms(7000);
+		break;
+		case 8:
+		_delay_ms(8000);
+		break;
+		case 9:
+		_delay_ms(9000);
+		break;
+		case 10:
+		_delay_ms(10000);
+		break;
 		}
+		
 
 	}
 }
@@ -304,10 +329,10 @@ void execute_R(int *params)
 {
 	int adc_val;
 	for(int current_n = 0; current_n < params[1]; ++current_n){
-		adc_val = my_eeprom_read_word(params[0] + (current_n * 2))
+		adc_val = check_bounds(my_eeprom_read_word(params[0] + (current_n * 2)));
 		char adc_buff[10];
 		sprintf(adc_buff, "v=%d.%d V", adc_val / 1000, adc_val % 1000);
-		print_single_line_message(adc_buff)
+		print_single_line_message(adc_buff);
 	}
 }
 // ///////////////////////////////////////////////////////////////////
@@ -387,7 +412,6 @@ unsigned int read_command(char *command_array, size_t arr_len)
 	default:
 		print_single_line_message("Error: Invalid Command!!");
 	}
-
 	max_command_length = CODE_TO_LENGTH[ret_code];
 	char curr_char;
 	unsigned int curr_read = 1;
@@ -424,68 +448,4 @@ void print_single_line_message(const char *message)
 	usart_prints(message);
 	print_new_line();
 }
-
 // ///////////////////////////////////////////////////////////////////
-
-// old code temporarily kept for reference
-// ///////////////////////////////////////////////////////////////////
-// OLD CODE --> reverse string
-// const char * sdata = "Enter 4 characters to reverse:"; // String in SRAM
-//		int i = 0;
-//		while (i < 4){
-//			input = read_char_from_pc();
-//			inputstring[i] = input;
-//			i++;
-//		}
-//		strrev(inputstring);
-//		print_new_line();
-//		usart_prints(inputstring);
-
-// EEPROM writing reading and writing
-// eeprom_write_word(0x00, 4387);
-// int result = eeprom_read_word(0x00);
-// char thingy[20];
-// sprintf(thingy, "Got: %d", result);
-// usart_prints(thingy);
-// print_new_line();
-
-
-
-	//if (command[0]=='M'){
-		//return 0x00;
-	//}
-//
-	//*a = atoi(command[2]);
-	//*n = atoi(command[4]);
-//
-	//// repeated range checks should be a function
-	//if (*a < 0 || *a > 510){
-		//print_single_line_message("0 =< a =< 510");
-		//return 0x01;
-	//}
-//
-	//if (*n < 1 || *n > 20){
-		//print_single_line_message("1 =< n =< 20");
-		//return 0x01;
-	//}
-//
-	//if (command[0] != 'R')
-	//{
-		//t = atoi(command[6]);
-		//if (*t < 1 || *t > 10){
-		//print_single_line_message("1 =< t =< 10");
-		//return 0x01;
-	//}
-	//}
-	//else
-	//{
-		//*t = 0;
-	//}
-	//if (command[0] == 'E')
-	//{
-		//*d = atoi(command[8]);
-		//if (*d < 0 || *d > 1){
-			//print_single_line_message("0 =< t =< 1");
-			//return 0x01;
-		//}
-	//}
