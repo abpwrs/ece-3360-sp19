@@ -44,9 +44,19 @@ void execute_S(int *);
 void execute_E(int *);
 void parse_args(const char *, int *);
 
+// INPUT VALIDATION
+char validate_input(int *);
+char check_param(int, int, int, char *);
+
+// ISR inits
+void timer1_init();
+
 // our EEPROM methods (avoiding interrupts)
 void my_eeprom_write_word(uint16_t, uint16_t);
 uint16_t my_eeprom_read_word(uint16_t);
+
+
+
 
 // Global timer variables
 volatile int T_END = 0;
@@ -155,7 +165,7 @@ void interpret_command(const char *command_string)
 	int param_arr[4];
 	char failure;
 	parse_args(command_string, param_arr);
-	failure = 0x00; //INPUT VALIDATION
+	failure = validate_input(param_arr); //INPUT VALIDATION
 	if (failure == 0x01)
 	{
 		print_single_line_message("Failure to Parse!");
@@ -188,6 +198,25 @@ void interpret_command(const char *command_string)
     //print_single_line_message(buff);
 
 	
+}
+
+// INPUT VALIDATION:
+char validate_input(int * params){
+	char ret_val = 0x00;
+	ret_val |= check_param(params[0], 0, 510, "0 =< a =< 510");
+	ret_val |= check_param(params[1], 1, 20, "1 =< n =< 20");
+	ret_val |= check_param(params[2], 1, 10, "1 =< t =< 10");
+	ret_val |= check_param(params[3], 1, 1, "0 =< d =< 1");
+	return ret_val;
+
+}
+
+char check_param(int value, int min_v, int max_v, char * message){
+	if (value < min_v || value > max_v){
+		print_single_line_message(message);
+		return 0x01;
+	}
+	return 0x00;
 }
 
 // parse args --> the return code can be passed by ref to reduce mem usage
@@ -235,36 +264,59 @@ void execute_M()
 {
 	int adc_output;
 	adc_output = read_adc();
-	char adc_buff[9];
+	char adc_buff[10];
 	sprintf(adc_buff, "v=%d.%d V", adc_output / 1000, adc_output % 1000);
-	print_new_line();
-	usart_prints(adc_buff);
-	print_new_line();
-	return 0x00; // hard coded return no failure
+	print_single_line_message(adc_buff)
 }
 // ///////////////////////////////////////////////////////////////////
 
 // S
 // ///////////////////////////////////////////////////////////////////
 // TODO: implement S functionality
-void execute_S(int *arr)
+void execute_S(int *params)
 {
+	if (STORE_IN_PROG){
+		print_single_line_message("Error: store already in progress!");
+	}else{
+		// start ISR timer1
+		// timer1_init();
+		// the rest of the storage is handled by ISR(TIMER1_OVF_vect)
+
+		// blocking store
+		int adc_val;
+		for(int current_n = 0; current_n < params[1]; ++current_n){
+			adc_val = read_adc();
+			my_eeprom_write_word(params[0] + (current_n * 2), adc_val)
+			// diagnostic print
+			char adc_buff[25];
+			sprintf(adc_buff, "Storing v=%d.%d V at %d", adc_output / 1000, adc_output % 1000, params[0] + (current_n * 2));
+			print_single_line_message(adc_buff)
+			_delay_ms(params[2]*1000);
+		}
+
+	}
 }
 
 // ///////////////////////////////////////////////////////////////////
 
 // R
 // ///////////////////////////////////////////////////////////////////
-// TODO: implement R functionality
-void execute_R(int *arr)
+void execute_R(int *params)
 {
+	int adc_val;
+	for(int current_n = 0; current_n < params[1]; ++current_n){
+		adc_val = my_eeprom_read_word(params[0] + (current_n * 2))
+		char adc_buff[10];
+		sprintf(adc_buff, "v=%d.%d V", adc_val / 1000, adc_val % 1000);
+		print_single_line_message(adc_buff)
+	}
 }
 // ///////////////////////////////////////////////////////////////////
 
 // E
 // ///////////////////////////////////////////////////////////////////
 // TODO: implement E functionality
-void execute_E(int *arr)
+void execute_E(int *params)
 {
 }
 // ///////////////////////////////////////////////////////////////////
