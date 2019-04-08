@@ -92,7 +92,6 @@ int main(void)
 	while (1)
 	{
 		command_code = read_command(inputstring, arr_len);
-		print_single_line_message(inputstring);
 		if (command_code != 0x00)
 		{
 			interpret_command(inputstring);
