@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <avr/interrupt.h>
 #include <avr/eeprom.h>
+#include <i2cmaster.h>
 // ////////////////
 
 // Function Prototypes
@@ -56,9 +57,6 @@ void timer1_init();
 void my_eeprom_write_word(uint16_t, uint16_t);
 uint16_t my_eeprom_read_word(uint16_t);
 
-
-
-
 // Global timer variables
 volatile int T_END = 0;
 volatile int T_CURRENT = 0;
@@ -70,7 +68,6 @@ volatile char STORE_IN_PROG = 0x00;
 void timer1_init(){
 	//TCCR1A |= ();
 	TCCR1B |= (1<<CS12);
-
 }
 
 ISR(TIMER1_OVF_vect) {
