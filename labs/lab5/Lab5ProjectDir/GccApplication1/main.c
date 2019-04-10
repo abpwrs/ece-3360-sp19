@@ -19,7 +19,7 @@
 #include <stdio.h>
 #include <avr/interrupt.h>
 #include <avr/eeprom.h>
-#include <i2cmaster.h>
+#include "i2cmaster.h"
 // ////////////////
 
 // Function Prototypes
@@ -58,6 +58,7 @@ void my_eeprom_write_word(uint16_t, uint16_t);
 uint16_t my_eeprom_read_word(uint16_t);
 
 // Global timer variables
+volatile char led = 0x00;
 volatile int T_END = 0;
 volatile int T_CURRENT = 0;
 volatile int N_END = 0;
@@ -66,11 +67,33 @@ volatile char STORE_IN_PROG = 0x00;
 
 // Timer configuration
 void timer1_init(){
+	// 8,000,000 / 256 = 31250 ticks per second.
+	// We need timer to range from 34286 to 65536
+	//    @ a 1/256. It's overflow then occurs
+	//    once every second.
 	//TCCR1A |= ();
-	TCCR1B |= (1<<CS12);
+	TCCR1B = TCCR1B |  1 << CS12;   // 256 Prescale
+	TCCR1B = TCCR1B |  1 << WGM12;  // CTC Mode: Clear timer on compare mode
+	// When TCNT1 (Counter index) matches OCR1A, it's reset to zero 
+	// and the OCF1A Interrupt Flag is Set. OCF1A Automatically cleared
+	OCR1A = 0x7A12; // Set the top
+	TIMSK1 = TIMSK1 |  1 << OCIE1A; // Output Compare A Match Interrupt Enable
+	
 }
 
-ISR(TIMER1_OVF_vect) {
+ISR(TIMER1_COMPA_vect) { 
+	if (led){
+		PORTC |= 0x20;        // Turn Off LED
+		led = 0x00;
+	}
+	else{
+		PORTC &= ~(0x20);     // Turn On LED
+		led = 0x01;
+	}
+	
+	
+	// If we use 16 bit for storing (S Command)
+	// ////////////////////////////////////////
 	//ISR: Called every second
 	//* Updates T_CURRENT to compare to T_END
 	//* Upon T_END = T_CURRENT
@@ -81,12 +104,15 @@ ISR(TIMER1_OVF_vect) {
 
 int main(void)
 {
+	DDRC = 0x20;
 	usart_init();
 	adc_init();
+	timer1_init();
 	const size_t arr_len = 14;  // max length of a command
 	char inputstring[arr_len]; // input string to hold commands
 	unsigned int command_code;
-
+	
+	sei();
 	while (1)
 	{
 		command_code = read_command(inputstring, arr_len);
