@@ -26,24 +26,25 @@
 
 // prints
 void usart_prints(const char *);
-void usart_printf();
-void print_new_line();
+// void usart_printf(); -- THIS IS NEVER USED
+void print_new_line(void);
 void print_single_line_message(const char *);
 
 // usart io
-unsigned char read_char_from_pc();
-void usart_init();
+unsigned char read_char_from_pc(void);
+void usart_init(void);
 
 // using the adc
-void adc_init();
-int read_adc();
+void adc_init(void);
+int read_adc(void);
 int check_bounds(int);
 
 // command interp
 unsigned int read_command(char *, size_t);
 void interpret_command(const char *);
+void my_delay(int delay);
 
-void execute_M();
+void execute_M(void);
 void execute_R(int *);
 void execute_S(int *);
 void execute_E(int *);
@@ -54,14 +55,14 @@ char validate_input(int *);
 char check_param(int, int, int, char *);
 
 // ISR inits
-void timer1_init();
+void timer1_init(void);
 
 // our EEPROM methods (avoiding interrupts)
 void my_eeprom_write_word(uint16_t, uint16_t);
 uint16_t my_eeprom_read_word(uint16_t);
 
 // DAC Write
-void write_dac(float,int);
+void write_dac(float, int);
 
 // Global timer variables
 // TODO: Remove?
@@ -74,45 +75,50 @@ volatile char STORE_IN_PROG = 0x00;
 
 // TODO: Remove?
 // Timer configuration
-void timer1_init(){
+void timer1_init(void)
+{
 	// 8,000,000 / 256 = 31250 ticks per second.
 	// We need timer to range from 34286 to 65536
 	//    @ a 1/256. It's overflow then occurs
 	//    once every second.
 	//TCCR1A |= ();
-	TCCR1B = TCCR1B |  1 << CS12;   // 256 Prescale
-	TCCR1B = TCCR1B |  1 << WGM12;  // CTC Mode: Clear timer on compare mode
-	// When TCNT1 (Counter index) matches OCR1A, it's reset to zero 
+	TCCR1B = TCCR1B | 1 << CS12;  // 256 Prescale
+	TCCR1B = TCCR1B | 1 << WGM12; // CTC Mode: Clear timer on compare mode
+	// When TCNT1 (Counter index) matches OCR1A, it's reset to zero
 	// and the OCF1A Interrupt Flag is Set. OCF1A Automatically cleared
-	OCR1A = 0x7A12; // Set the top
-	TIMSK1 = TIMSK1 |  1 << OCIE1A; // Output Compare A Match Interrupt Enable
+	OCR1A = 0x7A12;				   // Set the top
+	TIMSK1 = TIMSK1 | 1 << OCIE1A; // Output Compare A Match Interrupt Enable
 }
 
-void write_dac(float voltage, int output){
+void write_dac(float voltage, int output)
+{
 	int write_val = (int)(voltage / 19.6);
-	
+
 	char buff[10];
 	sprintf(buff, "volt->int: %d", write_val);
 	print_single_line_message(buff);
-	
+
 	i2c_init();
-	i2c_start_wait(0x58+I2C_WRITE);
+	i2c_start_wait(0x58 + I2C_WRITE);
 	i2c_write(output);
 	i2c_write(write_val);
 	i2c_stop();
 }
 
 // ISR That responds to the top (Compare A Match Interrupt)
-ISR(TIMER1_COMPA_vect) { 
-	if (led){
-		PORTC |= 0x20;        // Turn Off LED
+ISR(TIMER1_COMPA_vect)
+{
+	if (led)
+	{
+		PORTC |= 0x20; // Turn Off LED
 		led = 0x00;
 	}
-	else{
-		PORTC &= ~(0x20);     // Turn On LED
+	else
+	{
+		PORTC &= ~(0x20); // Turn On LED
 		led = 0x01;
 	}
-	
+
 	// If we use 16 bit for storing (S Command)
 	// ////////////////////////////////////////
 	//ISR: Called every second
@@ -125,15 +131,15 @@ ISR(TIMER1_COMPA_vect) {
 
 int main(void)
 {
-	DDRC = 0x20;
+	DDRC = 0x20; // why is this in DDRC to start??
 	usart_init();
 	adc_init();
 	//timer1_init();
-	const size_t arr_len = 14;  // max length of a command
+	const size_t arr_len = 14; // max length of a command
 	char inputstring[arr_len]; // input string to hold commands
 	unsigned int command_code;
 	sei();
-	
+
 	while (1)
 	{
 		command_code = read_command(inputstring, arr_len);
@@ -146,7 +152,7 @@ int main(void)
 
 // USART Functions
 // ///////////////////////////////////////////////////////////////////
-void usart_init()
+void usart_init(void)
 {
 	UCSR0A = UCSR0A & ~(0x02);			  // Set the mode to set "Async Normal Mode" (Slide 45 SerialComm)
 	UCSR0B = (1 << RXEN0) | (1 << TXEN0); // set to transmit and receive
@@ -170,13 +176,13 @@ void usart_prints(const char *sdata)
 // ADC Functions
 // ///////////////////////////////////////////////////////////////////
 // Configure ADC
-void adc_init()
+void adc_init(void)
 {
 	ADMUX = ADMUX | (1 << REFS0); // Configure ADC Reference
 	ADCSRA = (1 << ADEN);
 }
 
-int read_adc()
+int read_adc(void)
 {
 	ADCSRA = ADCSRA | (1 << ADSC);
 	while (ADCSRA & (1 << ADIF))
@@ -190,10 +196,14 @@ int read_adc()
 	}
 	return voltage;
 }
-int check_bounds(int voltage){
-	if (voltage < 0){
+int check_bounds(int voltage)
+{
+	if (voltage < 0)
+	{
 		voltage = 0;
-	} else if (voltage > 5000){
+	}
+	else if (voltage > 5000)
+	{
 		voltage = 0;
 	}
 	return voltage;
@@ -241,21 +251,25 @@ void interpret_command(const char *command_string)
 }
 
 // INPUT VALIDATION:
-char validate_input(int * params){
+char validate_input(int *params)
+{
 	char ret_val = 0x00;
 	ret_val |= check_param(params[0], 0, 510, "0 =< a =< 510");
 	ret_val |= check_param(params[1], 1, 20, "1 =< n =< 20");
 	ret_val |= check_param(params[2], 1, 10, "1 =< t =< 10");
 	ret_val |= check_param(params[3], 0, 1, "0 =< d =< 1");
-	if (params[0] + (2*params[1]) > 510){
+	if (params[0] + (2 * params[1]) > 510)
+	{
 		ret_val = 0x01;
 		print_single_line_message("a + (2 * n) <= 510");
 	}
 	return ret_val;
 }
 
-char check_param(int value, int min_v, int max_v, char * message){
-	if (value < min_v || value > max_v){
+char check_param(int value, int min_v, int max_v, char *message)
+{
+	if (value < min_v || value > max_v)
+	{
 		print_single_line_message(message);
 		return 0x01;
 	}
@@ -266,29 +280,40 @@ char check_param(int value, int min_v, int max_v, char * message){
 // ///////////////////////////////////////////////////////////////////
 void parse_args(const char *command, int *arr)
 {
-	for (int i = 0; i<4; ++i){
+	// set all params to a valid initial state
+	for (int i = 0; i < 4; ++i)
+	{
 		arr[i] = 1;
 	}
-	if(command[0] != 'M'){
-		unsigned int param_count = 0;
+
+	// parse the command character array
+	if (command[0] != 'M')
+	{ // if the command isn't M
+		unsigned int param_count = 0; // which parameter are we parsing
 		unsigned int command_index = 1;
 		char param[3];
 		unsigned int param_index = 0;
 
-		do {
+		// loop through command array and parse args 
+		do
+		{
 			command_index += 1;
 
-			if(command[command_index] == ',' || command[command_index] == '\0'){
+			if (command[command_index] == ',' || command[command_index] == '\0')
+			{
 				// save param
 				arr[param_count] = atoi(param);
 				param_count += 1;
 				// reset param
-				param_index=0;
-				for(int i=0; i<3; ++i){
+				param_index = 0;
+				for (int i = 0; i < 3; ++i)
+				{
 					param[i] = '\0';
 				}
-			} else{
-				// add to param buffer
+			}
+			else
+			{
+				// add to param char buffer
 				param[param_index] = command[command_index];
 				param_index += 1;
 			}
@@ -301,10 +326,9 @@ void parse_args(const char *command, int *arr)
 // specific functions for each sub-command
 // M
 // ///////////////////////////////////////////////////////////////////
-void execute_M()
+void execute_M(void)
 {
-	int adc_output;
-	adc_output = check_bounds(read_adc());
+	int adc_output = check_bounds(read_adc());
 	char adc_buff[10];
 	sprintf(adc_buff, "v=%d.%d V", adc_output / 1000, adc_output % 1000);
 	print_single_line_message(adc_buff);
@@ -313,52 +337,21 @@ void execute_M()
 
 // S
 // ///////////////////////////////////////////////////////////////////
-// TODO: Use ISR to prevent blocking? 
+// TODO: Use ISR to prevent blocking? -- this would be extra credit
 //		 Timer set up for 1 second now, so would need to use global
 //       variables to track across seconds
 void execute_S(int *params)
 {
 	// blocking store
 	int adc_val;
-	for(int current_n = 0; current_n < params[1]; ++current_n){
+	for (int current_n = 0; current_n < params[1]; ++current_n)
+	{
 		adc_val = check_bounds(read_adc());
 		my_eeprom_write_word(params[0] + (current_n * 2), adc_val);
 		char adc_buff[25];
 		sprintf(adc_buff, "Storing v=%d.%d V at %d", adc_val / 1000, adc_val % 1000, params[0] + (current_n * 2));
 		print_single_line_message(adc_buff);
-		// TODO: Can this be moved out?
-		switch(params[2]){
-		case 1:
-		_delay_ms(1000);
-		break;
-		case 2:
-		_delay_ms(2000);
-		break;
-		case 3:
-		_delay_ms(3000);
-		break;
-		case 4:
-		_delay_ms(4000);
-		break;
-		case 5:
-		_delay_ms(5000);
-		break;
-		case 6:
-		_delay_ms(6000);
-		break;
-		case 7:
-		_delay_ms(7000);
-		break;
-		case 8:
-		_delay_ms(8000);
-		break;
-		case 9:
-		_delay_ms(9000);
-		break;
-		case 10:
-		_delay_ms(10000);
-		break;
-		}
+		my_delay(params[2]);
 	}
 }
 
@@ -369,7 +362,8 @@ void execute_S(int *params)
 void execute_R(int *params)
 {
 	int adc_val;
-	for(int current_n = 0; current_n < params[1]; ++current_n){
+	for (int current_n = 0; current_n < params[1]; ++current_n)
+	{
 		adc_val = check_bounds(my_eeprom_read_word(params[0] + (current_n * 2)));
 		char adc_buff[10];
 		sprintf(adc_buff, "v=%d.%d V", adc_val / 1000, adc_val % 1000);
@@ -384,46 +378,15 @@ void execute_E(int *params)
 {
 	// Blocking E
 	int adc_val;
-	for(int current_n = 0; current_n < params[1]; ++current_n){
+	for (int current_n = 0; current_n < params[1]; ++current_n)
+	{
 		adc_val = check_bounds(my_eeprom_read_word(params[0] + (current_n * 2)));
 		char adc_buff[10];
 		// TODO: Replace below line with call to write to DAC
 		sprintf(adc_buff, "Writing %d.%dV to DAC Output %d", adc_val / 1000, adc_val % 1000, params[3]);
 		print_single_line_message(adc_buff);
 		write_dac(adc_val, params[3]);
-		// TODO: Move this duplicate long delay case out?
-		switch(params[2]){
-			case 1:
-			_delay_ms(1000);
-			break;
-			case 2:
-			_delay_ms(2000);
-			break;
-			case 3:
-			_delay_ms(3000);
-			break;
-			case 4:
-			_delay_ms(4000);
-			break;
-			case 5:
-			_delay_ms(5000);
-			break;
-			case 6:
-			_delay_ms(6000);
-			break;
-			case 7:
-			_delay_ms(7000);
-			break;
-			case 8:
-			_delay_ms(8000);
-			break;
-			case 9:
-			_delay_ms(9000);
-			break;
-			case 10:
-			_delay_ms(10000);
-			break;
-		}
+		my_delay(params[2]);
 	}
 }
 // ///////////////////////////////////////////////////////////////////
@@ -495,10 +458,12 @@ unsigned int read_command(char *command_array, size_t arr_len)
 	default:
 		print_single_line_message("Error: Invalid Command!!");
 	}
+	
 	max_command_length = CODE_TO_LENGTH[ret_code];
 	char curr_char;
 	unsigned int curr_read = 1;
-	while(curr_read < max_command_length && curr_char != '\r'){
+	while (curr_read < max_command_length && curr_char != '\r')
+	{
 		curr_char = read_char_from_pc();
 		if (curr_char != '\r')
 		{
@@ -510,7 +475,7 @@ unsigned int read_command(char *command_array, size_t arr_len)
 
 } // Reading from serial input
 // ///////////////////////////////////////////////////////////////////
-unsigned char read_char_from_pc()
+unsigned char read_char_from_pc(void)
 {
 	while (!(UCSR0A & (1 << RXC0)))
 		;
@@ -520,7 +485,7 @@ unsigned char read_char_from_pc()
 
 // utility prints
 // ///////////////////////////////////////////////////////////////////
-void print_new_line()
+void print_new_line(void)
 {
 	usart_prints("\n\r");
 }
@@ -530,5 +495,46 @@ void print_single_line_message(const char *message)
 	print_new_line();
 	usart_prints(message);
 	print_new_line();
+}
+// ///////////////////////////////////////////////////////////////////
+
+// my_delay
+// ///////////////////////////////////////////////////////////////////
+
+void my_delay(int delay)
+{
+	switch (delay)
+	{
+	case 1:
+		_delay_ms(1000);
+		break;
+	case 2:
+		_delay_ms(2000);
+		break;
+	case 3:
+		_delay_ms(3000);
+		break;
+	case 4:
+		_delay_ms(4000);
+		break;
+	case 5:
+		_delay_ms(5000);
+		break;
+	case 6:
+		_delay_ms(6000);
+		break;
+	case 7:
+		_delay_ms(7000);
+		break;
+	case 8:
+		_delay_ms(8000);
+		break;
+	case 9:
+		_delay_ms(9000);
+		break;
+	case 10:
+		_delay_ms(10000);
+		break;
+	}
 }
 // ///////////////////////////////////////////////////////////////////
