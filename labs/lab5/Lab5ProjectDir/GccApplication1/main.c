@@ -61,7 +61,7 @@ void my_eeprom_write_word(uint16_t, uint16_t);
 uint16_t my_eeprom_read_word(uint16_t);
 
 // DAC Write
-void write_dac(float);
+void write_dac(float,int);
 
 // Global timer variables
 // TODO: Remove?
@@ -88,7 +88,7 @@ void timer1_init(){
 	TIMSK1 = TIMSK1 |  1 << OCIE1A; // Output Compare A Match Interrupt Enable
 }
 
-void write_dac(float voltage){
+void write_dac(float voltage, int output){
 	int write_val = (int)(voltage / 19.6);
 	
 	char buff[10];
@@ -97,7 +97,7 @@ void write_dac(float voltage){
 	
 	i2c_init();
 	i2c_start_wait(0x58+I2C_WRITE);
-	i2c_write(0x00);
+	i2c_write(output);
 	i2c_write(write_val);
 	i2c_stop();
 }
@@ -128,7 +128,6 @@ int main(void)
 	DDRC = 0x20;
 	usart_init();
 	adc_init();
-	write_dac(1000);
 	//timer1_init();
 	const size_t arr_len = 14;  // max length of a command
 	char inputstring[arr_len]; // input string to hold commands
