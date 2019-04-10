@@ -60,6 +60,9 @@ void timer1_init();
 void my_eeprom_write_word(uint16_t, uint16_t);
 uint16_t my_eeprom_read_word(uint16_t);
 
+// Test DAC Write
+void write_dac();
+
 // Global timer variables
 // TODO: Remove?
 volatile char led = 0x00;
@@ -83,6 +86,14 @@ void timer1_init(){
 	// and the OCF1A Interrupt Flag is Set. OCF1A Automatically cleared
 	OCR1A = 0x7A12; // Set the top
 	TIMSK1 = TIMSK1 |  1 << OCIE1A; // Output Compare A Match Interrupt Enable
+}
+
+void write_dac(){
+	i2c_init();
+	i2c_start_wait(0x40+I2C_WRITE);
+	i2c_write(0x00);
+	i2c_write(0xFF);
+	i2c_stop();
 }
 
 // ISR That responds to the top (Compare A Match Interrupt)
@@ -111,6 +122,7 @@ int main(void)
 	DDRC = 0x20;
 	usart_init();
 	adc_init();
+	write_dac();
 	//timer1_init();
 	const size_t arr_len = 14;  // max length of a command
 	char inputstring[arr_len]; // input string to hold commands
@@ -229,7 +241,7 @@ char validate_input(int * params){
 	ret_val |= check_param(params[0], 0, 510, "0 =< a =< 510");
 	ret_val |= check_param(params[1], 1, 20, "1 =< n =< 20");
 	ret_val |= check_param(params[2], 1, 10, "1 =< t =< 10");
-	ret_val |= check_param(params[3], 1, 1, "0 =< d =< 1");
+	ret_val |= check_param(params[3], 0, 1, "0 =< d =< 1");
 	if (params[0] + (2*params[1]) > 510){
 		ret_val = 0x01;
 		print_single_line_message("a + (2 * n) <= 510");
@@ -297,7 +309,7 @@ void execute_M()
 // S
 // ///////////////////////////////////////////////////////////////////
 // TODO: Use ISR to prevent blocking? 
-//		 Timer set up for 1 second now, so just would need to use global
+//		 Timer set up for 1 second now, so would need to use global
 //       variables to track across seconds
 void execute_S(int *params)
 {
@@ -374,7 +386,7 @@ void execute_E(int *params)
 		// TODO: Replace below line with call to write to DAC
 		sprintf(adc_buff, "Write %d.%dV to DAC...", adc_val / 1000, adc_val % 1000);
 		print_single_line_message(adc_buff);
-		// TODO: Move this duplicate long case delay out
+		// TODO: Move this duplicate long delay case out?
 		switch(params[2]){
 			case 1:
 			_delay_ms(1000);
