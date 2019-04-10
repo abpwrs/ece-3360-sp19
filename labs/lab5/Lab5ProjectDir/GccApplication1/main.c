@@ -94,9 +94,9 @@ void write_dac(float voltage, int output)
 {
 	int write_val = (int)(voltage / 19.6);
 
-	char buff[10];
-	sprintf(buff, "volt->int: %d", write_val);
-	print_single_line_message(buff);
+	//char buff[10];
+	//sprintf(buff, "volt->int: %d", write_val);
+	//print_single_line_message(buff);
 
 	i2c_init();
 	i2c_start_wait(0x58 + I2C_WRITE);
@@ -134,6 +134,8 @@ int main(void)
 	DDRC = 0x20; // why is this in DDRC to start??
 	usart_init();
 	adc_init();
+	write_dac(0000,0);
+	write_dac(0000,1);
 	//timer1_init();
 	const size_t arr_len = 14; // max length of a command
 	char inputstring[arr_len]; // input string to hold commands
