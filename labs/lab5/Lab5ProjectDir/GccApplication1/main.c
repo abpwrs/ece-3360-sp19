@@ -122,16 +122,13 @@ void usart_prints(const char *sdata)
 // Configure ADC
 void adc_init(void)
 {
-	//ADMUX = ADMUX & ~(1 << REFS0); // Configure ADC Reference
-	//ADCSRA = (0 << ADEN);
-	
 	ADMUX = ADMUX | (1 << REFS0); // Configure ADC Reference
 	ADCSRA = (1 << ADEN);
 }
 
 int read_adc(void)
 {
-	//adc_init();
+	
 	ADCSRA = ADCSRA | (1 << ADSC);
 	while (ADCSRA & (1 << ADIF))
 		;
