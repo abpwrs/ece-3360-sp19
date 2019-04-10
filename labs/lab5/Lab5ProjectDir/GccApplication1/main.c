@@ -26,7 +26,6 @@
 
 // prints
 void usart_prints(const char *);
-// void usart_printf(); -- THIS IS NEVER USED
 void print_new_line(void);
 void print_single_line_message(const char *);
 
@@ -64,74 +63,8 @@ uint16_t my_eeprom_read_word(uint16_t);
 // DAC Write
 void write_dac(float, int);
 
-// Global timer variables
-// TODO: Remove?
-volatile char led = 0x00;
-volatile int T_END = 0;
-volatile int T_CURRENT = 0;
-volatile int N_END = 0;
-volatile int N_CURRENT = 0;
-volatile char STORE_IN_PROG = 0x00;
-
-// TODO: Remove?
-// Timer configuration
-void timer1_init(void)
-{
-	// 8,000,000 / 256 = 31250 ticks per second.
-	// We need timer to range from 34286 to 65536
-	//    @ a 1/256. It's overflow then occurs
-	//    once every second.
-	//TCCR1A |= ();
-	TCCR1B = TCCR1B | 1 << CS12;  // 256 Prescale
-	TCCR1B = TCCR1B | 1 << WGM12; // CTC Mode: Clear timer on compare mode
-	// When TCNT1 (Counter index) matches OCR1A, it's reset to zero
-	// and the OCF1A Interrupt Flag is Set. OCF1A Automatically cleared
-	OCR1A = 0x7A12;				   // Set the top
-	TIMSK1 = TIMSK1 | 1 << OCIE1A; // Output Compare A Match Interrupt Enable
-}
-
-void write_dac(float voltage, int output)
-{
-	int write_val = (int)(voltage / 19.6);
-
-	//char buff[10];
-	//sprintf(buff, "volt->int: %d", write_val);
-	//print_single_line_message(buff);
-
-	i2c_init();
-	i2c_start_wait(0x58 + I2C_WRITE);
-	i2c_write(output);
-	i2c_write(write_val);
-	i2c_stop();
-}
-
-// ISR That responds to the top (Compare A Match Interrupt)
-ISR(TIMER1_COMPA_vect)
-{
-	if (led)
-	{
-		PORTC |= 0x20; // Turn Off LED
-		led = 0x00;
-	}
-	else
-	{
-		PORTC &= ~(0x20); // Turn On LED
-		led = 0x01;
-	}
-
-	// If we use 16 bit for storing (S Command)
-	// ////////////////////////////////////////
-	//ISR: Called every second
-	//* Updates T_CURRENT to compare to T_END
-	//* Upon T_END = T_CURRENT
-	//** Take the sample -> store it (address++)
-	//** reset T_END, N_CURRENT++
-	//** When N_CURRENT = N_END, turn off timer
-}
-
 int main(void)
 {
-	DDRC = 0x20; // why is this in DDRC to start??
 	usart_init();
 	adc_init();
 	write_dac(0000,0);
@@ -150,6 +83,18 @@ int main(void)
 			interpret_command(inputstring);
 		}
 	}
+}
+
+// DAC Functions
+// ///////////////////////////////////////////////////////////////////
+void write_dac(float voltage, int output)
+{
+	int write_val = (int)(voltage / 19.6);
+	i2c_init();
+	i2c_start_wait(0x58 + I2C_WRITE);
+	i2c_write(output);
+	i2c_write(write_val);
+	i2c_stop();
 }
 
 // USART Functions
