@@ -17,7 +17,6 @@
 #include <avr/io.h>
 #include <util/delay.h>
 #include <stdio.h>
-#include <avr/interrupt.h>
 #include <avr/eeprom.h>
 #include "i2cmaster.h"
 // ////////////////
@@ -56,10 +55,6 @@ char check_param(int, int, int, char *);
 // ISR inits
 void timer1_init(void);
 
-// our EEPROM methods (avoiding interrupts)
-void my_eeprom_write_word(uint16_t, uint16_t);
-uint16_t my_eeprom_read_word(uint16_t);
-
 // DAC Write
 int write_dac(float, int);
 
@@ -67,13 +62,12 @@ int main(void)
 {
 	usart_init();
 	adc_init();
-	write_dac(0000,0);
-	write_dac(0000,1);
+	write_dac(0,0);
+	write_dac(0,1);
 	//timer1_init();
 	const size_t arr_len = 14; // max length of a command
 	char inputstring[arr_len]; // input string to hold commands
 	unsigned int command_code;
-	sei();
 
 	while (1)
 	{
@@ -87,11 +81,13 @@ int main(void)
 
 // DAC Functions
 // ///////////////////////////////////////////////////////////////////
+
+
 int write_dac(float voltage, int output)
 {
 	int write_val = (int)(voltage / 19.6);
 	i2c_init();
-	i2c_start_wait(0x58 + I2C_WRITE);
+	i2c_start(0x58 + I2C_WRITE);
 	i2c_write(output);
 	i2c_write(write_val);
 	i2c_stop();
@@ -126,12 +122,16 @@ void usart_prints(const char *sdata)
 // Configure ADC
 void adc_init(void)
 {
+	//ADMUX = ADMUX & ~(1 << REFS0); // Configure ADC Reference
+	//ADCSRA = (0 << ADEN);
+	
 	ADMUX = ADMUX | (1 << REFS0); // Configure ADC Reference
 	ADCSRA = (1 << ADEN);
 }
 
 int read_adc(void)
 {
+	//adc_init();
 	ADCSRA = ADCSRA | (1 << ADSC);
 	while (ADCSRA & (1 << ADIF))
 		;
@@ -276,6 +276,7 @@ void parse_args(const char *command, int *arr)
 // ///////////////////////////////////////////////////////////////////
 void execute_M(void)
 {
+	read_adc();
 	int adc_output = check_bounds(read_adc());
 	char adc_buff[10];
 	sprintf(adc_buff, "v=%d.%d V", adc_output / 1000, adc_output % 1000);
@@ -285,21 +286,21 @@ void execute_M(void)
 
 // S
 // ///////////////////////////////////////////////////////////////////
-// TODO: Use ISR to prevent blocking? -- this would be extra credit
-//		 Timer set up for 1 second now, so would need to use global
-//       variables to track across seconds
 void execute_S(int *params)
 {
 	// blocking store
 	int adc_val;
 	for (int current_n = 0; current_n < params[1]; ++current_n)
 	{
+		read_adc();
 		adc_val = check_bounds(read_adc());
-		my_eeprom_write_word(params[0] + (current_n * 2), adc_val);
+		eeprom_write_word(params[0] + (current_n * 2), adc_val);
 		char adc_buff[30];
 		sprintf(adc_buff, "t=%d s, v=%d.%d V, addr: %d", current_n * params[2], adc_val / 1000, adc_val % 1000, params[0] + (current_n * 2));
 		print_single_line_message(adc_buff);
-		my_delay(params[2]);
+		if (current_n < params[1]-1){
+			my_delay(params[2]);	
+		}
 	}
 }
 
@@ -312,8 +313,8 @@ void execute_R(int *params)
 	int adc_val;
 	for (int current_n = 0; current_n < params[1]; ++current_n)
 	{
-		adc_val = check_bounds(my_eeprom_read_word(params[0] + (current_n * 2)));
-		char adc_buff[10];
+		adc_val = check_bounds(eeprom_read_word(params[0] + (current_n * 2)));
+		char adc_buff[20];
 		sprintf(adc_buff, "v=%d.%d V, addr: %d", adc_val / 1000, adc_val % 1000, params[0] + (current_n * 2));
 		print_single_line_message(adc_buff);
 	}
@@ -328,32 +329,15 @@ void execute_E(int *params)
 	int adc_val;
 	for (int current_n = 0; current_n < params[1]; ++current_n)
 	{
-		adc_val = check_bounds(my_eeprom_read_word(params[0] + (current_n * 2)));
-		char adc_buff[30];
+		adc_val = check_bounds(eeprom_read_word(params[0] + (current_n * 2)));
+		char adc_buff[50];
 		int write_result = write_dac(adc_val, params[3]);
 		sprintf(adc_buff, "t=%d s, DAC channel %d set to %d.%d V (%dd)", current_n*params[2], params[3], adc_val / 1000, adc_val % 1000, write_result);
 		print_single_line_message(adc_buff);
-		my_delay(params[2]);
+		if (current_n < params[1]-1){
+			my_delay(params[2]);
+		}
 	}
-}
-// ///////////////////////////////////////////////////////////////////
-
-// our eeprom interaction methods (effectively just avoiding interrupts)
-// ///////////////////////////////////////////////////////////////////
-void my_eeprom_write_word(uint16_t addr, uint16_t value)
-{
-	cli();
-	eeprom_write_word(addr, value);
-	sei();
-}
-
-uint16_t my_eeprom_read_word(uint16_t addr)
-{
-	uint16_t tmp;
-	cli();
-	tmp = eeprom_read_word(addr);
-	sei();
-	return tmp;
 }
 // ///////////////////////////////////////////////////////////////////
 
