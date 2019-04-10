@@ -61,7 +61,7 @@ void my_eeprom_write_word(uint16_t, uint16_t);
 uint16_t my_eeprom_read_word(uint16_t);
 
 // DAC Write
-void write_dac(float, int);
+int write_dac(float, int);
 
 int main(void)
 {
@@ -87,7 +87,7 @@ int main(void)
 
 // DAC Functions
 // ///////////////////////////////////////////////////////////////////
-void write_dac(float voltage, int output)
+int write_dac(float voltage, int output)
 {
 	int write_val = (int)(voltage / 19.6);
 	i2c_init();
@@ -95,6 +95,7 @@ void write_dac(float voltage, int output)
 	i2c_write(output);
 	i2c_write(write_val);
 	i2c_stop();
+	return write_val;
 }
 
 // USART Functions
@@ -295,8 +296,8 @@ void execute_S(int *params)
 	{
 		adc_val = check_bounds(read_adc());
 		my_eeprom_write_word(params[0] + (current_n * 2), adc_val);
-		char adc_buff[25];
-		sprintf(adc_buff, "Storing v=%d.%d V at %d", adc_val / 1000, adc_val % 1000, params[0] + (current_n * 2));
+		char adc_buff[30];
+		sprintf(adc_buff, "t=%d s, v=%d.%d V, addr: %d", current_n * params[2], adc_val / 1000, adc_val % 1000, params[0] + (current_n * 2));
 		print_single_line_message(adc_buff);
 		my_delay(params[2]);
 	}
@@ -313,7 +314,7 @@ void execute_R(int *params)
 	{
 		adc_val = check_bounds(my_eeprom_read_word(params[0] + (current_n * 2)));
 		char adc_buff[10];
-		sprintf(adc_buff, "v=%d.%d V", adc_val / 1000, adc_val % 1000);
+		sprintf(adc_buff, "v=%d.%d V, addr: %d", adc_val / 1000, adc_val % 1000, params[0] + (current_n * 2));
 		print_single_line_message(adc_buff);
 	}
 }
@@ -329,9 +330,9 @@ void execute_E(int *params)
 	{
 		adc_val = check_bounds(my_eeprom_read_word(params[0] + (current_n * 2)));
 		char adc_buff[30];
-		sprintf(adc_buff, "Writing %d.%dV to DAC Output %d", adc_val / 1000, adc_val % 1000, params[3]);
+		int write_result = write_dac(adc_val, params[3]);
+		sprintf(adc_buff, "t=%d s, DAC channel %d set to %d.%d V (%dd)", current_n*params[2], params[3], adc_val / 1000, adc_val % 1000, write_result);
 		print_single_line_message(adc_buff);
-		write_dac(adc_val, params[3]);
 		my_delay(params[2]);
 	}
 }
