@@ -29,18 +29,21 @@ void usart_prints(const char *);
 void usart_printf();
 void print_new_line();
 void print_single_line_message(const char *);
+
 // usart io
 unsigned char read_char_from_pc();
 void usart_init();
+
 // using the adc
 void adc_init();
 int read_adc();
 int check_bounds(int);
+
 // command interp
 unsigned int read_command(char *, size_t);
 void interpret_command(const char *);
 
-void execute_M(); // M don't care about your args
+void execute_M();
 void execute_R(int *);
 void execute_S(int *);
 void execute_E(int *);
@@ -58,6 +61,7 @@ void my_eeprom_write_word(uint16_t, uint16_t);
 uint16_t my_eeprom_read_word(uint16_t);
 
 // Global timer variables
+// TODO: Remove?
 volatile char led = 0x00;
 volatile int T_END = 0;
 volatile int T_CURRENT = 0;
@@ -65,6 +69,7 @@ volatile int N_END = 0;
 volatile int N_CURRENT = 0;
 volatile char STORE_IN_PROG = 0x00;
 
+// TODO: Remove?
 // Timer configuration
 void timer1_init(){
 	// 8,000,000 / 256 = 31250 ticks per second.
@@ -78,9 +83,9 @@ void timer1_init(){
 	// and the OCF1A Interrupt Flag is Set. OCF1A Automatically cleared
 	OCR1A = 0x7A12; // Set the top
 	TIMSK1 = TIMSK1 |  1 << OCIE1A; // Output Compare A Match Interrupt Enable
-	
 }
 
+// ISR That responds to the top (Compare A Match Interrupt)
 ISR(TIMER1_COMPA_vect) { 
 	if (led){
 		PORTC |= 0x20;        // Turn Off LED
@@ -90,7 +95,6 @@ ISR(TIMER1_COMPA_vect) {
 		PORTC &= ~(0x20);     // Turn On LED
 		led = 0x01;
 	}
-	
 	
 	// If we use 16 bit for storing (S Command)
 	// ////////////////////////////////////////
@@ -107,12 +111,12 @@ int main(void)
 	DDRC = 0x20;
 	usart_init();
 	adc_init();
-	timer1_init();
+	//timer1_init();
 	const size_t arr_len = 14;  // max length of a command
 	char inputstring[arr_len]; // input string to hold commands
 	unsigned int command_code;
-	
 	sei();
+	
 	while (1)
 	{
 		command_code = read_command(inputstring, arr_len);
@@ -122,8 +126,6 @@ int main(void)
 		}
 	}
 }
-
-// Set Asynchronous Normal Mode and configure BAUD Rate @ 9600 -- TODO: what is this in reference to?
 
 // USART Functions
 // ///////////////////////////////////////////////////////////////////
@@ -294,19 +296,20 @@ void execute_M()
 
 // S
 // ///////////////////////////////////////////////////////////////////
-// TODO: implement S functionality
+// TODO: Use ISR to prevent blocking? 
+//		 Timer set up for 1 second now, so just would need to use global
+//       variables to track across seconds
 void execute_S(int *params)
 {
-
 	// blocking store
 	int adc_val;
 	for(int current_n = 0; current_n < params[1]; ++current_n){
 		adc_val = check_bounds(read_adc());
 		my_eeprom_write_word(params[0] + (current_n * 2), adc_val);
-		// diagnostic print
 		char adc_buff[25];
 		sprintf(adc_buff, "Storing v=%d.%d V at %d", adc_val / 1000, adc_val % 1000, params[0] + (current_n * 2));
 		print_single_line_message(adc_buff);
+		// TODO: Can this be moved out?
 		switch(params[2]){
 		case 1:
 		_delay_ms(1000);
@@ -339,8 +342,6 @@ void execute_S(int *params)
 		_delay_ms(10000);
 		break;
 		}
-		
-
 	}
 }
 
@@ -362,9 +363,51 @@ void execute_R(int *params)
 
 // E
 // ///////////////////////////////////////////////////////////////////
-// TODO: implement E functionality
 void execute_E(int *params)
 {
+	// Blocking E
+	int adc_val;
+	for(int current_n = 0; current_n < params[1]; ++current_n){
+		adc_val = check_bounds(my_eeprom_read_word(params[0] + (current_n * 2)));
+		char adc_buff[10];
+		// TODO: Set DAC command bit 0 based on params[3]
+		// TODO: Replace below line with call to write to DAC
+		sprintf(adc_buff, "Write %d.%dV to DAC...", adc_val / 1000, adc_val % 1000);
+		print_single_line_message(adc_buff);
+		// TODO: Move this duplicate long case delay out
+		switch(params[2]){
+			case 1:
+			_delay_ms(1000);
+			break;
+			case 2:
+			_delay_ms(2000);
+			break;
+			case 3:
+			_delay_ms(3000);
+			break;
+			case 4:
+			_delay_ms(4000);
+			break;
+			case 5:
+			_delay_ms(5000);
+			break;
+			case 6:
+			_delay_ms(6000);
+			break;
+			case 7:
+			_delay_ms(7000);
+			break;
+			case 8:
+			_delay_ms(8000);
+			break;
+			case 9:
+			_delay_ms(9000);
+			break;
+			case 10:
+			_delay_ms(10000);
+			break;
+		}
+	}
 }
 // ///////////////////////////////////////////////////////////////////
 
