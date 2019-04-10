@@ -387,10 +387,10 @@ void execute_E(int *params)
 	for(int current_n = 0; current_n < params[1]; ++current_n){
 		adc_val = check_bounds(my_eeprom_read_word(params[0] + (current_n * 2)));
 		char adc_buff[10];
-		// TODO: Set DAC command bit 0 based on params[3]
 		// TODO: Replace below line with call to write to DAC
-		sprintf(adc_buff, "Write %d.%dV to DAC...", adc_val / 1000, adc_val % 1000);
+		sprintf(adc_buff, "Writing %d.%dV to DAC Output %d", adc_val / 1000, adc_val % 1000, params[3]);
 		print_single_line_message(adc_buff);
+		write_dac(adc_val, params[3]);
 		// TODO: Move this duplicate long delay case out?
 		switch(params[2]){
 			case 1:
