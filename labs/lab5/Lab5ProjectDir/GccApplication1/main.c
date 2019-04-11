@@ -259,7 +259,8 @@ char parse_args(const char *command, int *arr)
 			else
 			{
 				// add to param char buffer
-				if (command[comand_index] < '0' || command[comand_index] > '9'){
+				if (command[command_index] < '0' || command[command_index] > '9'){
+					print_single_line_message("Non-numeric value detected!");
 					return 0x01;
 				}
 				param[param_index] = command[command_index];
