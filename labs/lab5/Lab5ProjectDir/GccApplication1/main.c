@@ -46,7 +46,7 @@ void execute_M(void);
 void execute_R(int *);
 void execute_S(int *);
 void execute_E(int *);
-void parse_args(const char *, int *);
+char parse_args(const char *, int *);
 
 // INPUT VALIDATION
 char validate_input(int *);
@@ -168,9 +168,9 @@ int check_bounds(int voltage)
 void interpret_command(const char *command_string)
 {
 	int param_arr[4];
-	char failure;
-	parse_args(command_string, param_arr);
-	failure = validate_input(param_arr);
+	char failure = 0x00;
+	failure |= parse_args(command_string, param_arr);
+	failure |= validate_input(param_arr);
 	if (failure == 0x01)
 	{
 		print_single_line_message("Failure to Parse!");
@@ -223,7 +223,7 @@ char check_param(int value, int min_v, int max_v, char *message)
 
 // parse args --> the return code can be passed by ref to reduce mem usage
 // ///////////////////////////////////////////////////////////////////
-void parse_args(const char *command, int *arr)
+char parse_args(const char *command, int *arr)
 {
 	// set all params to a valid initial state
 	for (int i = 0; i < 4; ++i)
@@ -259,11 +259,16 @@ void parse_args(const char *command, int *arr)
 			else
 			{
 				// add to param char buffer
+				if (command[comand_index] < '0' || command[comand_index] > '9'){
+					return 0x01;
+				}
 				param[param_index] = command[command_index];
 				param_index += 1;
 			}
 		} while (command[command_index] != '\0');
 	}
+
+	return 0x00;
 }
 
 // ///////////////////////////////////////////////////////////////////
