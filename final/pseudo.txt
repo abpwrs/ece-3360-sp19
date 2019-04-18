@@ -26,6 +26,41 @@ the maximum code is of length 6 for punctuation
 
 
 
+// Button Hardware 
+Mirror the button onto two pins 0,1 so that we can configure unique interupts
+for each one. ISC01 and ISC02 configured to trigger a posedge and negedge ISRs
 
+
+# protypes
+start_clock; --> starts a counter where each overflow is one dit
+
+# GLOBALS:
+prev_state;
+curr_state;
+curr_char_morse = [0,0,0,0,0,0]; // 0,1,2
+press_length;
+
+
+// configure PCINT0 to trigger on logical change
+logical_change_interrupt(PCINT0){
+  start_clock;
+
+
+}
+
+// configure timerflow --> 1 dit
+timer_overflow_interrupt(TOv1_ovf){
+  press_length++;
+}
+
+
+
+sei();
+main() {
+  while (0x01){
+    
+  }
+
+}
 
 
