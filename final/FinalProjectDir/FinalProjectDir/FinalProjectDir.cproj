@@ -12,9 +12,9 @@
     <OutputFileName>$(MSBuildProjectName)</OutputFileName>
     <OutputFileExtension>.elf</OutputFileExtension>
     <OutputDirectory>$(MSBuildProjectDirectory)\$(Configuration)</OutputDirectory>
-    <AssemblyName>GccApplication1</AssemblyName>
-    <Name>GccApplication1</Name>
-    <RootNamespace>GccApplication1</RootNamespace>
+    <AssemblyName>FinalProjectDir</AssemblyName>
+    <Name>FinalProjectDir</Name>
+    <RootNamespace>FinalProjectDir</RootNamespace>
     <ToolchainFlavour>Native</ToolchainFlavour>
     <KeepTimersRunning>true</KeepTimersRunning>
     <OverrideVtor>false</OverrideVtor>

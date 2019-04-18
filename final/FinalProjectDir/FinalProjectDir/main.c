@@ -7,14 +7,15 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <avr/delay.h>
 
 // LCD #define statements
-#define LCD_RS  5
-#define LCD_E   3
-#define LCD_D4  0
-#define LCD_D5  1
-#define LCD_D6  2
-#define LCD_D7  3
+#define RS  5
+#define E   3
+#define D4  0
+#define D5  1
+#define D6  2
+#define D7  3
 #define LED_PORT  5
 #define MORSE_ARR_LEN 6
 
@@ -37,18 +38,13 @@ int  press_len = 0;
 
 // button press interrupt 
 // all of the logic here
-button_interrupt_isr(INT0_vect){
-    //if (PORTC & (1<<5)){
-        //PORTC |= (0<<5);
-    //} else {
-        //PORTC |= (1<<5);
-    //}
-    PORTC |= 1 << 5;
-    _delay_ms(1000);
-    PORTC |= 0 << 5;
-    _delay_ms(1000);
-    PORTC |= 1 << 5;
-    _delay_ms(1000);
+ISR(INT0_vect){
+    if (PORTC & (1<<5)){
+        PORTC &= ~(1<<5);
+    } else {
+       PORTC |= (1<<5);
+    }
+
 }
 
 
@@ -66,7 +62,7 @@ void lcd_strobe(void);
 void lcd_write_char(char *);
 
 // convert 6 integer array
-char morse_to_ascii(int *, size_t);
+char morse_to_ascii(int *, int);
 
 int main(void)
 {
@@ -85,12 +81,15 @@ int main(void)
 
 
     // enable interrupts
-    sei(void);
+    sei();
 
     // infinite loop
     while (1) 
     {
-
+	    //PORTC |= 1 << 5;
+	    //_delay_ms(1000);
+	    //PORTC &= ~(1<<5);
+	    //_delay_ms(1000);
     }
 }
 
@@ -139,7 +138,7 @@ void lcd_strobe(void){
     PORTB &= ~(1<<E);
     _delay_us(200);
     PORTB |= (1<<E);
-    r_delay_us(200);
+    _delay_us(200);
     PORTB &= ~(1<<E);
 }
 
@@ -147,7 +146,7 @@ void lcd_write_char(char * message){
 
 }
 
-char morse_to_ascii(int * morse_arr, size_t used_len){
+char morse_to_ascii(int * morse_arr, int used_len){
     switch (used_len){
         case 0:
             // error
