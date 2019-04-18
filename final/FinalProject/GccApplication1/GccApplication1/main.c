@@ -46,7 +46,9 @@ button_interrupt_isr(INT0_vect){
     PORTC |= 1 << 5;
     _delay_ms(1000);
     PORTC |= 0 << 5;
-
+    _delay_ms(1000);
+    PORTC |= 1 << 5;
+    _delay_ms(1000);
 }
 
 
