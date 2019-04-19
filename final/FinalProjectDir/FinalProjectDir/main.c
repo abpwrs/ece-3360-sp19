@@ -44,7 +44,6 @@ ISR(INT0_vect){
     } else {
        PORTC |= (1<<5);
     }
-
 }
 
 
@@ -58,8 +57,9 @@ void set_to_4_bit(void);
 // lcd strobe
 void lcd_strobe(void);
 
-// write char string to lcd
-void lcd_write_char(char *);
+// write to lcd
+void lcd_write_char(char);
+void lcd_write_str(char *, int);
 
 // convert 6 integer array
 char morse_to_ascii(int *, int);
@@ -73,13 +73,15 @@ int main(void)
     DDRC |= (1<<D7);
     DDRB |= (1<<RS);
     DDRB |= (1<<E);
-    
+    lcd_init();
+
+
     // set interrupt configurations
     DDRC |= 1 << 5;
     EICRA |= (1<<ISC00);
     EIMSK |= (1<<INT0);
 
-
+	lcd_write_str("TESTING", 7);
     // enable interrupts
     sei();
 
@@ -121,6 +123,22 @@ void lcd_init(void){
     send_to_lcd(0x06); 
 }
 
+void lcd_write_char(char character){
+	PORTB |= 1 << RS;
+	character = ((character & 0x0F) << 4 | (character & 0xF0) >> 4);
+	send_to_lcd(character);
+	// swap nibbles
+	character = ((character & 0x0F) << 4 | (character & 0xF0) >> 4);
+	send_to_lcd(character);
+	// swap nibbles back
+}
+
+void lcd_write_str(char * message, int length){
+	for(int i; i<length; ++i){
+		lcd_write_char(message[i]);
+	}
+}
+
 // send command does not automatically set to command mode
 void send_to_lcd(char command){
     // send the command
@@ -142,9 +160,6 @@ void lcd_strobe(void){
     PORTB &= ~(1<<E);
 }
 
-void lcd_write_char(char * message){
-
-}
 
 char morse_to_ascii(int * morse_arr, int used_len){
     switch (used_len){
