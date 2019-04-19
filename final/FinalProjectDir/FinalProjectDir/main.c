@@ -8,6 +8,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/delay.h>
+#include "lcd.h"
 
 // LCD #define statements
 #define RS  5
@@ -50,7 +51,7 @@ ISR(INT0_vect){
 
 // prototypes
 // lcd initialization methods
-void lcd_init(void);
+
 void set_to_8_bit(void);
 void set_to_4_bit(void);
 
@@ -73,15 +74,20 @@ int main(void)
     DDRC |= (1<<D7);
     DDRB |= (1<<RS);
     DDRB |= (1<<E);
-    lcd_init();
-
-
+    //my_lcd_init();
+	lcd_init(LCD_DISP_ON_CURSOR_BLINK);
+	lcd_puts("abc");
+	lcd_putc('B');
+	lcd_home();
+	lcd_putc('Z');
+	lcd_gotoxy(4,1);
+	lcd_putc('Z');
     // set interrupt configurations
     DDRC |= 1 << 5;
     EICRA |= (1<<ISC00);
     EIMSK |= (1<<INT0);
 
-	lcd_write_str("TESTING", 7);
+	// lcd_write_str("TESTING", 7);
     // enable interrupts
     sei();
 
@@ -92,10 +98,11 @@ int main(void)
 	    //_delay_ms(1000);
 	    //PORTC &= ~(1<<5);
 	    //_delay_ms(1000);
+		//lcd_write_char('A');
     }
 }
 
-void lcd_init(void){
+void my_lcd_init(void){
 // set to command mode
     PORTB &= ~(1<<RS);
 // delay 10 ms
