@@ -35,18 +35,18 @@
 
 // Globals
 // /////////////////////////////////
-// Button States
-// UP = 0x01
-// DOWN = 0x00
-char prev_state = 0x00;
-char curr_state = 0x00;
-int  press_len = 0;
+
+// Farnsworth unit speed
+float fUnit = 3.0; // 4 units per second (250ms)
+float samplesPerUnit = 26; // @ 80/second samples 80/fUnit = 26
 
 // Input
 int input[6] = {0,0,0,0,0,0};
 float downSamples = 0;
 float upSamples = 0;
 char prevButtonDown = 0;
+char justFinishedWord = 1;
+char justFinishedChar = 1;
 	
 //  Button booleans
 char buttonDown = 0;
@@ -64,12 +64,13 @@ void timer1_init(){
 	
 	// Other scaled calculations
 	// 40 times a second: 31250/40 =   782 : 0x30D
+	// 80 times a second: 31250/80 =   391 : 0x187
 	
 	TCCR1B = TCCR1B |  1 << CS12;   // 256 Pre-scale
 	TCCR1B = TCCR1B |  1 << WGM12;  // CTC Mode: Clear timer on compare mode
 	// When TCNT1 (Counter index) matches OCR1A, it's reset to zero
 	// and the OCF1A Interrupt Flag is Set. OCF1A Automatically cleared
-	OCR1A = 0x30D; // Set the top (Really bottom tho?)
+	OCR1A = 0x187; // Set the top
 	TIMSK1 = TIMSK1 |  1 << OCIE1A; // Output Compare A Match Interrupt Enable
 }
 // /////////////////////////////////
@@ -88,19 +89,51 @@ ISR(TIMER1_COMPA_vect){
 	
 	if (buttonDown) {
 		downSamples += 1;
+		
 		//lcd_printMsg("Down");
 	}
 	
 	else {
 		upSamples += 1;
+		if ((upSamples >= 25 * samplesPerUnit) && (!justFinishedWord)) {
+			lcd_printMsg("Word Done");
+			justFinishedWord = 1;
+		}
+		else if ((upSamples >= 12 * samplesPerUnit) && (!justFinishedChar)) {
+			lcd_printMsg("Char Done");
+			justFinishedChar = 1;
+		}
 		//lcd_printMsg("Up  ");
 	}
 	
 	if ((buttonDown != prevButtonDown) && (buttonDown)) { // just pressed
+		justFinishedWord = 0;
+		justFinishedChar = 0;
+		downSamples = 0;
+		upSamples = 0;
 		//lcd_printMsg("Press");
 	}
 	
 	else if ((buttonDown != prevButtonDown) && (!buttonDown)) { // just released
+		if (downSamples >= 7 * samplesPerUnit){
+			lcd_printMsg("Too Long");
+			justFinishedChar = 1;
+			justFinishedWord = 1;
+		}
+		else if (downSamples >= 3 * samplesPerUnit){
+			lcd_printMsg("Dah");
+		}
+		else if (downSamples >= 1 * samplesPerUnit){
+			lcd_printMsg("Dit");
+		}
+		else {
+			lcd_printMsg("Too Short");
+			justFinishedChar = 1;
+			justFinishedWord = 1;
+		}
+		
+		downSamples = 0;
+		upSamples = 0;
 		//lcd_printMsg("Release");
 	}
 	
@@ -187,6 +220,8 @@ void lcd_initText(void) {
 }
 
 void lcd_printMsg(const char *s){
+	lcd_gotoxy(5, 0);
+	lcd_puts("           ");
 	lcd_gotoxy(5, 0);
 	lcd_puts(s);
 }
