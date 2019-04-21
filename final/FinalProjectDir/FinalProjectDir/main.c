@@ -42,6 +42,7 @@ float samplesPerUnit = 26; // @ 80/second samples 80/fUnit = 26
 
 // Input
 int input[6] = {0,0,0,0,0,0};
+int inputIndex = 0;
 float downSamples = 0;
 float upSamples = 0;
 char prevButtonDown = 0;
@@ -89,23 +90,25 @@ ISR(TIMER1_COMPA_vect){
 	
 	if (buttonDown) {
 		downSamples += 1;
-		
 		//lcd_printMsg("Down");
 	}
-	
 	else {
 		upSamples += 1;
-		if ((upSamples >= 25 * samplesPerUnit) && (!justFinishedWord)) {
+		if ((upSamples >= 20 * samplesPerUnit) && (!justFinishedWord)) {
 			lcd_printMsg("Word Done");
+			lcd_showInputArr();
 			justFinishedWord = 1;
+			resetInputArr();
+			inputIndex = 0;
 		}
-		else if ((upSamples >= 12 * samplesPerUnit) && (!justFinishedChar)) {
+		else if ((upSamples >= 8 * samplesPerUnit) && (!justFinishedChar)) {
 			lcd_printMsg("Char Done");
+			lcd_showInputArr();
 			justFinishedChar = 1;
+			inputIndex += 1;
 		}
 		//lcd_printMsg("Up  ");
 	}
-	
 	if ((buttonDown != prevButtonDown) && (buttonDown)) { // just pressed
 		justFinishedWord = 0;
 		justFinishedChar = 0;
@@ -113,7 +116,6 @@ ISR(TIMER1_COMPA_vect){
 		upSamples = 0;
 		//lcd_printMsg("Press");
 	}
-	
 	else if ((buttonDown != prevButtonDown) && (!buttonDown)) { // just released
 		if (downSamples >= 7 * samplesPerUnit){
 			lcd_printMsg("Too Long");
@@ -122,24 +124,24 @@ ISR(TIMER1_COMPA_vect){
 		}
 		else if (downSamples >= 3 * samplesPerUnit){
 			lcd_printMsg("Dah");
+			input[inputIndex] = 2;
 		}
 		else if (downSamples >= 1 * samplesPerUnit){
 			lcd_printMsg("Dit");
+			input[inputIndex] = 1;
 		}
 		else {
 			lcd_printMsg("Too Short");
 			justFinishedChar = 1;
 			justFinishedWord = 1;
 		}
-		
 		downSamples = 0;
 		upSamples = 0;
 		//lcd_printMsg("Release");
 	}
 	
-	// store state for next operation
+	// store state for next operation, in order to identify edges
 	prevButtonDown = buttonDown;
-	
 }
 
 // /////////////////////////////////
@@ -184,12 +186,7 @@ int main(void)
     // infinite loop
     while (1) 
     {
-	    //lcd_printShort();
-		//_delay_ms(1500);
-		//lcd_printLong();
-		//_delay_ms(1500);
-		//lcd_printWord();
-		//_delay_ms(1500);
+	   
     }
 }
 // ///////////////////////////////
@@ -197,20 +194,6 @@ int main(void)
 
 // Quick Printing Methods
 // ///////////////////////////////
-void lcd_printShort(void) {
-	lcd_gotoxy(9, 1);
-	lcd_puts("Short");
-}
-
-void lcd_printLong(void) {
-	lcd_gotoxy(9, 1);
-	lcd_puts("Long ");
-}
-
-void lcd_printWord(void) {
-	lcd_gotoxy(9, 1);
-	lcd_puts("Word ");
-}
 
 void lcd_initText(void) {
 	lcd_clrscr();
@@ -225,7 +208,33 @@ void lcd_printMsg(const char *s){
 	lcd_gotoxy(5, 0);
 	lcd_puts(s);
 }
+
+void lcd_printEntered(const char *s){
+	lcd_gotoxy(9, 1);
+	lcd_puts("       ");
+	lcd_gotoxy(9, 1);
+	lcd_puts(s);
+}
 // ///////////////////////////////
+
+// Evaluate input array
+// TODO: Make this a lookup input array 
+//		-> change to char output and evaluate input, instead of just displaying it
+void lcd_showInputArr(){
+	// Showing the input array adds 20% to memory due to sprintf
+	char buff[7];
+	int i=0;
+	int index = 0;
+	for (i=0; i<5; i++)
+		index += sprintf(&buff[index], "%d", input[i]);
+	lcd_printEntered(buff);
+}
+
+void resetInputArr(){
+	for(int i = 0; i<6; i++){
+		input[i] = 0;
+	}
+}
 
 // strobe the lcd
 void lcd_strobe(void){
@@ -273,7 +282,7 @@ char morse_to_ascii(int * morse_arr, int used_len){
 }
 
 /*
-Farnsworth Timing:
+Farnsworth Timing (Altered a lot based on user preference. Pretty clear in the ISR)
 dit:             1 unit  (down)
 dah:              3 units (down)
 morse-character:   1 unit  (up)
