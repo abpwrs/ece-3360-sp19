@@ -41,27 +41,74 @@
 char prev_state = 0x00;
 char curr_state = 0x00;
 int  press_len = 0;
+
+// Input
+int input[6] = {0,0,0,0,0,0};
+float downSamples = 0;
+float upSamples = 0;
+char prevButtonDown = 0;
+	
+//  Button booleans
+char buttonDown = 0;
+
 // /////////////////////////////////
 
-// timer that does a thing TBD
-// interrupt HERE
-// reset the timer
-
-// Timer Config
+// Timer Config (For button sampling to register dits and dahs)
 // /////////////////////////////////
-
+void timer1_init(){
+	// 8,000,000 / 256 = 31250 ticks per second.
+	// We need timer to range from 0 to 31250
+	//    @ a 1/256. It's overflow then occurs
+	//    once every second.
+	// 1  time  a second:              31250 : 0x7A12
+	
+	// Other scaled calculations
+	// 40 times a second: 31250/40 =   782 : 0x30D
+	
+	TCCR1B = TCCR1B |  1 << CS12;   // 256 Pre-scale
+	TCCR1B = TCCR1B |  1 << WGM12;  // CTC Mode: Clear timer on compare mode
+	// When TCNT1 (Counter index) matches OCR1A, it's reset to zero
+	// and the OCF1A Interrupt Flag is Set. OCF1A Automatically cleared
+	OCR1A = 0x30D; // Set the top (Really bottom tho?)
+	TIMSK1 = TIMSK1 |  1 << OCIE1A; // Output Compare A Match Interrupt Enable
+}
 // /////////////////////////////////
 
 // Interrupt Configuration
 // /////////////////////////////////
+
 // button press interrupt
 ISR(INT0_vect){
-    if (PORTC & (1<<5)){  // if off
-        PORTC &= ~(1<<5); // Turn on
-    } else {
-       PORTC |= (1<<5);   // Turn off
-    }
+	PINC |= (1<<5); // Toggle Light
 }
+
+// Timer1 Overflow ISR
+ISR(TIMER1_COMPA_vect){
+	buttonDown = !(PORTC & (1<<5));
+	
+	if (buttonDown) {
+		downSamples += 1;
+		//lcd_printMsg("Down");
+	}
+	
+	else {
+		upSamples += 1;
+		//lcd_printMsg("Up  ");
+	}
+	
+	if ((buttonDown != prevButtonDown) && (buttonDown)) { // just pressed
+		//lcd_printMsg("Press");
+	}
+	
+	else if ((buttonDown != prevButtonDown) && (!buttonDown)) { // just released
+		//lcd_printMsg("Release");
+	}
+	
+	// store state for next operation
+	prevButtonDown = buttonDown;
+	
+}
+
 // /////////////////////////////////
 
 // Main Loop
@@ -77,8 +124,9 @@ int main(void)
     DDRB |= (1<<E);
 	
 	// Initial LCD Config
-	lcd_init(LCD_DISP_ON_CURSOR_BLINK);
+	lcd_init(LCD_DISP_ON_CURSOR);
 	lcd_home();
+	lcd_initText();
 	//lcd_puts("abc");
 	//lcd_putc('B');
 	//lcd_putc('Z');
@@ -94,16 +142,55 @@ int main(void)
     EIMSK |= (1<<INT0);
 
     // enable interrupts
-    sei();
+    _delay_ms(50);
+	sei();
+	
+	// Turn on sampling timer
+	timer1_init();
 
     // infinite loop
     while (1) 
     {
-	    
+	    //lcd_printShort();
+		//_delay_ms(1500);
+		//lcd_printLong();
+		//_delay_ms(1500);
+		//lcd_printWord();
+		//_delay_ms(1500);
     }
 }
 // ///////////////////////////////
 
+
+// Quick Printing Methods
+// ///////////////////////////////
+void lcd_printShort(void) {
+	lcd_gotoxy(9, 1);
+	lcd_puts("Short");
+}
+
+void lcd_printLong(void) {
+	lcd_gotoxy(9, 1);
+	lcd_puts("Long ");
+}
+
+void lcd_printWord(void) {
+	lcd_gotoxy(9, 1);
+	lcd_puts("Word ");
+}
+
+void lcd_initText(void) {
+	lcd_clrscr();
+	lcd_puts("Msg:");
+	lcd_gotoxy(0, 1);
+	lcd_puts("Entered: ");
+}
+
+void lcd_printMsg(const char *s){
+	lcd_gotoxy(5, 0);
+	lcd_puts(s);
+}
+// ///////////////////////////////
 
 // strobe the lcd
 void lcd_strobe(void){
@@ -152,8 +239,8 @@ char morse_to_ascii(int * morse_arr, int used_len){
 
 /*
 Farnsworth Timing:
-short:             1 unit  (down)
-long:              3 units (down)
+dit:             1 unit  (down)
+dah:              3 units (down)
 morse-character:   1 unit  (up)
 ascii-character:   3 units (up)
 Word:              7 units or more (up)
