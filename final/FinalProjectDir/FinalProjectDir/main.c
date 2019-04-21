@@ -40,6 +40,11 @@
 float fUnit = 3.0; // 4 units per second (250ms)
 float samplesPerUnit = 26; // @ 80/second samples 80/fUnit = 26
 
+// Character mapping (dictionary out of two array cross order indexed)
+int primes[] = {5, 7, 13, 17, 19, 23};
+char chars[39] = {'E','T','A','H','I','M','N','D','G','K','O','R','S','U','W','B','C','F','J','L','P','Q','V','X','Y','Z','0','1','2','3','4','5','6','7','8','9',',','.','?'};
+int keys[39] = {5,10,19,42,12,24,17,30,37,43,50,32,25,38,45,47,60,55,79,49,62,71,59,64,77,54,122,117,110,97,80,61,66,73,86,103,138,131,114};
+
 // Input
 int input[6] = {0,0,0,0,0,0};
 int inputIndex = 0;
@@ -96,14 +101,12 @@ ISR(TIMER1_COMPA_vect){
 		upSamples += 1;
 		if ((upSamples >= 20 * samplesPerUnit) && (!justFinishedWord)) {
 			lcd_printMsg("Word Done");
-			lcd_showInputArr();
 			justFinishedWord = 1;
 			resetInputArr();
 			inputIndex = 0;
 		}
 		else if ((upSamples >= 8 * samplesPerUnit) && (!justFinishedChar)) {
 			lcd_printMsg("Char Done");
-			lcd_showInputArr();
 			justFinishedChar = 1;
 			inputIndex += 1;
 		}
@@ -217,17 +220,29 @@ void lcd_printEntered(const char *s){
 }
 // ///////////////////////////////
 
-// Evaluate input array
-// TODO: Make this a lookup input array 
-//		-> change to char output and evaluate input, instead of just displaying it
+// Reveal input array
 void lcd_showInputArr(){
 	// Showing the input array adds 20% to memory due to sprintf
 	char buff[7];
 	int i=0;
 	int index = 0;
-	for (i=0; i<5; i++)
-		index += sprintf(&buff[index], "%d", input[i]);
-	lcd_printEntered(buff);
+	//for (i=0; i<5; i++)
+		//index += sprintf(&buff[index], "%d", input[i]);
+	//lcd_printEntered(buff);
+}
+
+// Get character from input array
+char hashInputs(){
+	int i;
+	int lookupKey = 0;
+	for (i = 0; i < 6; i++){
+		lookupKey += primes[i]*input[i];
+	}
+	i = 0;
+	while(keys[i] != lookupKey){
+		i++;
+	}
+	return chars[i];
 }
 
 void resetInputArr(){
@@ -245,42 +260,6 @@ void lcd_strobe(void){
     PORTB &= ~(1<<E);
 }
 
-// convert 6 integer array to ascii
-char morse_to_ascii(int * morse_arr, int used_len){
-    switch (used_len){
-        case 0:
-            // error
-            break;
-
-        case 1: 
-            // lookup table 1
-            break;
-
-        case 2: 
-            // lookup table 2
-            break;
-        case 3: 
-            // lookup table 3
-            break;
-
-        case 4: 
-            // lookup table 4
-            break;
-
-        case 5: 
-            // lookup table 5
-            break;
-
-        case 6: 
-            // lookup table 6
-            break;
-
-        default:
-            // error
-            break;
-    }
-}
-
 /*
 Farnsworth Timing (Altered a lot based on user preference. Pretty clear in the ISR)
 dit:             1 unit  (down)
@@ -288,47 +267,4 @@ dah:              3 units (down)
 morse-character:   1 unit  (up)
 ascii-character:   3 units (up)
 Word:              7 units or more (up)
-*/
-
-/*
-ASCII, length 
-45, 1
-54, 1
-41, 2
-49, 2
-4D, 2
-4E, 2
-44, 3
-47, 3
-4B, 3
-4F, 3
-52, 3
-53, 3
-55, 3
-57, 3
-42, 4
-43, 4
-46, 4
-48, 4
-4A, 4
-4C, 4
-50, 4
-51, 4
-56, 4
-58, 4
-59, 4
-5A, 4
-30, 5
-31, 5
-32, 5
-33, 5
-34, 5
-35, 5
-36, 5
-37, 5
-38, 5
-39, 5
-2E, 6
-2C, 6
-3F, 6
 */
