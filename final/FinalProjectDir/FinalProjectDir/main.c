@@ -37,8 +37,8 @@
 // /////////////////////////////////
 
 // Farnsworth unit speed
-float fUnit = 3.0; // 4 units per second (250ms)
-float samplesPerUnit = 26; // @ 80/second samples 80/fUnit = 26
+#define F_UNIT 3.0 // 4 units per second (250ms)
+#define SAMPLES_PER_UNIT 26 // @ 80/second samples 80/fUnit = 26
 
 // Character mapping (dictionary out of two array cross order indexed)
 int primes[] = {5, 7, 13, 17, 19, 23};
@@ -46,8 +46,8 @@ char chars[39] = {'E','T','A','H','I','M','N','D','G','K','O','R','S','U','W','B
 int keys[39] = {5,10,19,42,12,24,17,30,37,43,50,32,25,38,45,47,60,55,79,49,62,71,59,64,77,54,122,117,110,97,80,61,66,73,86,103,138,131,114};
 
 // Input
-int input[6] = {0,0,0,0,0,0};
-int inputIndex = 0;
+volatile int input[6] = {0,0,0,0,0,0};
+volatile int inputIndex = 0;
 
 float downSamples = 0;
 float upSamples = 0;
@@ -112,7 +112,7 @@ ISR(TIMER1_COMPA_vect){
 	
 	if (buttonDown) {
 		downSamples += 1;
-		if (downSamples >= 4 * samplesPerUnit){
+		if (downSamples >= 4 * SAMPLES_PER_UNIT){
 			lcd_printMsg("Too Long");
 			PORTC |= (1<<5);
 			justFinishedChar = 1;
@@ -123,14 +123,14 @@ ISR(TIMER1_COMPA_vect){
 	}
 	else {
 		upSamples += 1;
-		if ((upSamples >= 50 * samplesPerUnit) && (!justFinishedWord)) {
+		if ((upSamples >= 20 * SAMPLES_PER_UNIT) && (!justFinishedWord)) {
 			lcd_printMsg("Word Done");
 			justFinishedWord = 1;
 			lcd_gotoxy(8, 1);
 			lcd_puts("        ");
 			lcd_puts("  ");
 		}
-		else if ((upSamples >= 5 * samplesPerUnit) && (!justFinishedChar)) {
+		else if ((upSamples >= 5 * SAMPLES_PER_UNIT) && (!justFinishedChar)) {
 			lcd_printMsg("Char Done");
 			lcd_showInputArr();
 			char inputChar = hashInputs();
@@ -150,7 +150,7 @@ ISR(TIMER1_COMPA_vect){
 		//lcd_printMsg("Press");
 	}
 	else if ((buttonDown != prevButtonDown) && (!buttonDown) && (inputIndex < 6)) { // just released + have room for more entries
-		if (downSamples >= 1 * samplesPerUnit){
+		if (downSamples >= 1 * SAMPLES_PER_UNIT){
 			lcd_printMsg("Dah");
 			input[inputIndex] = 2;
 			inputIndex++;
