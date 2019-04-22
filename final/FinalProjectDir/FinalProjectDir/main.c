@@ -200,16 +200,16 @@ int main(void)
 	PORTC |= (1<<5);
 	
     // set interrupt configurations
-    DDRC |= 1 << 5;
-    EICRA |= (1<<ISC00);
-    EIMSK |= (1<<INT0);
+    //DDRC |= 1 << 5;
+    //EICRA |= (1<<ISC00);
+    //EIMSK |= (1<<INT0);
 
     // enable interrupts
-    _delay_ms(50);
+    //_delay_ms(50);
 	sei();
 	
 	// Turn on sampling timer
-	timer1_init();
+	//timer1_init();
 
     // infinite loop
     while (1) 
