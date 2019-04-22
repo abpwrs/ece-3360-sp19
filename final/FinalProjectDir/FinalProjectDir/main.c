@@ -225,6 +225,7 @@ int main(void)
 
 void lcd_initText(void) {
 	lcd_clrscr();
+	lcd_home();
 	lcd_puts("Msg:");
 	lcd_gotoxy(0, 1);
 	lcd_puts("Entered:");
@@ -266,7 +267,7 @@ char hashInputs(){
 	i = 0;
 	while(keys[i] != lookupKey){
 		i++;
-		if (i == 39){
+		if (i >= 39){
 			lcd_printEntered("BadMsg");
 			return '!';
 		}
