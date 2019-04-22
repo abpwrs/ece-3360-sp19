@@ -48,9 +48,14 @@ int keys[39] = {5,10,19,42,12,24,17,30,37,43,50,32,25,38,45,47,60,55,79,49,62,71
 // Input
 int input[6] = {0,0,0,0,0,0};
 int inputIndex = 0;
+
 float downSamples = 0;
 float upSamples = 0;
+
+// State for edge detection
 char prevButtonDown = 0;
+
+// Boolean to improve entry
 char justFinishedWord = 1;
 char justFinishedChar = 1;
 	
@@ -58,6 +63,18 @@ char justFinishedChar = 1;
 char buttonDown = 0;
 
 // /////////////////////////////////
+
+// Prototypes
+// /////////////////////////////////
+char hashInputs();
+void lcd_initText();
+void lcd_printEntered();
+void lcd_printMsg();
+void lcd_showInputArr();
+void lcd_strobe();
+void resetInputArr();
+
+////////////////////////////////////
 
 // Timer Config (For button sampling to register dits and dahs)
 // /////////////////////////////////
@@ -91,24 +108,37 @@ ISR(INT0_vect){
 
 // Timer1 Overflow ISR
 ISR(TIMER1_COMPA_vect){
-	buttonDown = !(PORTC & (1<<5));
+	buttonDown = !(PINC & (1<<5));
 	
 	if (buttonDown) {
 		downSamples += 1;
+		if (downSamples >= 4 * samplesPerUnit){
+			lcd_printMsg("Too Long");
+			PORTC |= (1<<5);
+			justFinishedChar = 1;
+			justFinishedWord = 1;
+			resetInputArr();
+		}
 		//lcd_printMsg("Down");
 	}
 	else {
 		upSamples += 1;
-		if ((upSamples >= 20 * samplesPerUnit) && (!justFinishedWord)) {
+		if ((upSamples >= 50 * samplesPerUnit) && (!justFinishedWord)) {
 			lcd_printMsg("Word Done");
 			justFinishedWord = 1;
-			resetInputArr();
-			inputIndex = 0;
+			lcd_gotoxy(8, 1);
+			lcd_puts("        ");
+			lcd_puts("  ");
 		}
-		else if ((upSamples >= 8 * samplesPerUnit) && (!justFinishedChar)) {
+		else if ((upSamples >= 5 * samplesPerUnit) && (!justFinishedChar)) {
 			lcd_printMsg("Char Done");
+			lcd_showInputArr();
+			char inputChar = hashInputs();
+			lcd_gotoxy(14,1);
+			lcd_putc(':');
+			lcd_putc(inputChar);
 			justFinishedChar = 1;
-			inputIndex += 1;
+			resetInputArr();
 		}
 		//lcd_printMsg("Up  ");
 	}
@@ -119,31 +149,31 @@ ISR(TIMER1_COMPA_vect){
 		upSamples = 0;
 		//lcd_printMsg("Press");
 	}
-	else if ((buttonDown != prevButtonDown) && (!buttonDown)) { // just released
-		if (downSamples >= 7 * samplesPerUnit){
-			lcd_printMsg("Too Long");
-			justFinishedChar = 1;
-			justFinishedWord = 1;
-		}
-		else if (downSamples >= 3 * samplesPerUnit){
+	else if ((buttonDown != prevButtonDown) && (!buttonDown) && (inputIndex < 6)) { // just released + have room for more entries
+		if (downSamples >= 1 * samplesPerUnit){
 			lcd_printMsg("Dah");
 			input[inputIndex] = 2;
+			inputIndex++;
+			lcd_showInputArr();
 		}
-		else if (downSamples >= 1 * samplesPerUnit){
+		else { //(downSamples >= 1 * samplesPerUnit){
 			lcd_printMsg("Dit");
 			input[inputIndex] = 1;
+			inputIndex++;
+			lcd_showInputArr();
 		}
-		else {
-			lcd_printMsg("Too Short");
-			justFinishedChar = 1;
-			justFinishedWord = 1;
-		}
+		//else {
+			//lcd_printMsg("Too Short");
+			//justFinishedChar = 1;
+			//justFinishedWord = 1;
+			//resetInputArr();
+		//}
 		downSamples = 0;
 		upSamples = 0;
 		//lcd_printMsg("Release");
 	}
 	
-	// store state for next operation, in order to identify edges
+	// store state for next operation, in order to identify pos and neg edges
 	prevButtonDown = buttonDown;
 }
 
@@ -165,11 +195,6 @@ int main(void)
 	lcd_init(LCD_DISP_ON_CURSOR);
 	lcd_home();
 	lcd_initText();
-	//lcd_puts("abc");
-	//lcd_putc('B');
-	//lcd_putc('Z');
-	//lcd_gotoxy(4,1);
-	//lcd_putc('Z');
 	
 	// Turn off the LED to use for button feedback
 	PORTC |= (1<<5);
@@ -202,7 +227,7 @@ void lcd_initText(void) {
 	lcd_clrscr();
 	lcd_puts("Msg:");
 	lcd_gotoxy(0, 1);
-	lcd_puts("Entered: ");
+	lcd_puts("Entered:");
 }
 
 void lcd_printMsg(const char *s){
@@ -213,9 +238,9 @@ void lcd_printMsg(const char *s){
 }
 
 void lcd_printEntered(const char *s){
-	lcd_gotoxy(9, 1);
-	lcd_puts("       ");
-	lcd_gotoxy(9, 1);
+	lcd_gotoxy(8, 1);
+	lcd_puts("        ");
+	lcd_gotoxy(8, 1);
 	lcd_puts(s);
 }
 // ///////////////////////////////
@@ -226,9 +251,9 @@ void lcd_showInputArr(){
 	char buff[7];
 	int i=0;
 	int index = 0;
-	//for (i=0; i<5; i++)
-		//index += sprintf(&buff[index], "%d", input[i]);
-	//lcd_printEntered(buff);
+	for (i=0; i<6; i++)
+		index += sprintf(&buff[index], "%d", input[i]);
+	lcd_printEntered(buff);
 }
 
 // Get character from input array
@@ -241,14 +266,19 @@ char hashInputs(){
 	i = 0;
 	while(keys[i] != lookupKey){
 		i++;
+		if (i == 39){
+			lcd_printEntered("BadMsg");
+			return '!';
+		}
 	}
 	return chars[i];
 }
 
-void resetInputArr(){
+void resetInputArr(void){
 	for(int i = 0; i<6; i++){
 		input[i] = 0;
 	}
+	inputIndex = 0;
 }
 
 // strobe the lcd
