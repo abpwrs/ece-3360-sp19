@@ -16,9 +16,11 @@
 // Imports
 // /////////////////////////////////
 #include <avr/io.h>
+#include <stdio.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
 #include "lcd.h"
+#include "USART_RS232_H_file.h"
 // /////////////////////////////////
 
 // LCD #define statements
@@ -31,6 +33,7 @@
 #define D7  3
 #define LED_PORT  5
 #define MORSE_ARR_LEN 6
+#define BAUDRATE 9600
 // /////////////////////////////////
 
 // Globals
@@ -46,7 +49,7 @@ char chars[39] = {'E','T','A','H','I','M','N','D','G','K','O','R','S','U','W','B
 int keys[39] = {5,10,19,42,12,24,17,30,37,43,50,32,25,38,45,47,60,55,79,49,62,71,59,64,77,54,122,117,110,97,80,61,66,73,86,103,138,131,114};
 
 // Input
-volatile int input[6] = {0,0,0,0,0,0};
+volatile int input[MORSE_ARR_LEN] = {0,0,0,0,0,0};
 volatile int inputIndex = 0;
 
 float downSamples = 0;
@@ -137,6 +140,7 @@ ISR(TIMER1_COMPA_vect){
 			lcd_gotoxy(14,1);
 			lcd_putc(':');
 			lcd_putc(inputChar);
+			USART_TxChar(inputChar);
 			justFinishedChar = 1;
 			resetInputArr();
 		}
@@ -181,16 +185,12 @@ ISR(TIMER1_COMPA_vect){
 
 // Main Loop
 // ///////////////////////////////
+/*
 int main(void)
 {
-    // LCD Data Direction Configuration
-    DDRC |= (1<<D4);
-    DDRC |= (1<<D5);
-    DDRC |= (1<<D6);
-    DDRC |= (1<<D7);
-    DDRB |= (1<<RS);
-    DDRB |= (1<<E);
-	
+    //LCD Data Direction Configuration
+    DDRC |= (1<<D4) | (1<<D5) | (1<<D6) | (1<<D7) | (1<<RS) | (1<<E);
+
 	// Initial LCD Config
 	lcd_init(LCD_DISP_ON_CURSOR);
 	lcd_home();
@@ -200,23 +200,58 @@ int main(void)
 	PORTC |= (1<<5);
 	
     // set interrupt configurations
-    //DDRC |= 1 << 5;
-    //EICRA |= (1<<ISC00);
-    //EIMSK |= (1<<INT0);
+    DDRC |= 1 << 5;
+    EICRA |= (1<<ISC00);
+    EIMSK |= (1<<INT0);
 
     // enable interrupts
-    //_delay_ms(50);
+    _delay_ms(50);
 	sei();
 	
 	// Turn on sampling timer
-	//timer1_init();
+	timer1_init();
+	USART_Init(BAUDRATE); // initialize USART with 9600 baud rate 
+
+
 
     // infinite loop
     while (1) 
     {
+
+
 	   
     }
-}
+} */
+
+
+
+// bluetooth hello world main
+
+#define LED PORTC
+int main(void)
+{
+	char Data_in;
+	DDRC = 0xff;		// make PORT as output port 
+	lcd_init(LCD_DISP_ON_CURSOR);
+	lcd_home();
+	USART_Init(9600);	// initialize USART with 9600 baud rate 
+	LED = 0;
+	int chars = 0;
+	
+	while(1)
+	{
+		
+		Data_in = USART_RxChar();	         // receive data from Bluetooth device
+		lcd_putc(Data_in);
+		chars++;
+		if (chars > 15){
+			lcd_clrscr();
+			chars = 0;
+			lcd_home();
+		}
+	}
+} 
+
 // ///////////////////////////////
 
 
