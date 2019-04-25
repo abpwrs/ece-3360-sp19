@@ -223,9 +223,8 @@ int main(void)
 	timer1_init();
 	USART_Init(BAUDRATE); // initialize USART with 9600 baud rate 
 	
-	// blue_tooth_to_command_mode();
-	_delay_ms(10000);
-	USART_SendString("AT\r\n");
+	blue_tooth_to_command_mode();
+	USART_SendString("AT+ADDR?\r\n");
 	char data_in;
 	int num_chars = 0;
 
@@ -233,11 +232,13 @@ int main(void)
     while (1) 
     {
 		data_in = USART_RxChar();
-		lcd_putc(data_in);
-		num_chars++;
+		if (data_in != '\r' && data_in != '\n'){
+			lcd_putc(data_in);
+			num_chars++;
+		}
+
 		if (num_chars > 15){
-			lcd_clrscr();
-			lcd_home();
+			lcd_gotoxy(0,1);
 			num_chars = 0;
 		}
 
@@ -265,10 +266,12 @@ void enable_off_hc05(void) {
 	BLUE_TOOTH_PORT &= ~(1<<BLUE_TOOTH_E);
 }
 void blue_tooth_to_command_mode(void) {
-	enable_on_hc05();
-	_delay_us(50);
+	enable_off_hc05();
 	power_on_hc05();
-	_delay_us(50);
+	_delay_ms(2000);
+	enable_on_hc05();
+	_delay_ms(3000);
+	enable_off_hc05();
 }
 
 // ///////////////////////////////
