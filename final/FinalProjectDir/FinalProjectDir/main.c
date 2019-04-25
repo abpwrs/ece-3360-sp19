@@ -237,9 +237,9 @@ int main(void)
 	USART_Init(9600);	// initialize USART with 9600 baud rate 
 	LED = 0;
 	int chars = 0;
-	
 	while(1)
 	{
+		
 		
 		Data_in = USART_RxChar();	         // receive data from Bluetooth device
 		lcd_putc(Data_in);
@@ -248,9 +248,12 @@ int main(void)
 			lcd_clrscr();
 			chars = 0;
 			lcd_home();
+			USART_SendString("FULL!");
 		}
 	}
 } 
+
+
 
 // ///////////////////////////////
 
@@ -333,4 +336,50 @@ dah:              3 units (down)
 morse-character:   1 unit  (up)
 ascii-character:   3 units (up)
 Word:              7 units or more (up)
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+// bluetooth blinky
+// http://www.electronicwings.com/avr-atmega/hc-05-bluetooth-module-interfacing-with-atmega1632
+/*
+#include <avr/io.h>
+#include "USART_RS232_H_file.h"	
+
+#define LED PORTC		
+
+int main(void)
+{
+	char Data_in;
+	DDRC = 0xff;		
+	USART_Init(9600);	
+	LED = 0;
+	
+	while(1)
+	{
+		Data_in = USART_RxChar();	
+		if(Data_in =='1')
+		{
+			LED |= (1<<PC5);	
+			USART_SendString("LED_ON");
+			
+		}
+		else if(Data_in =='2')
+		{
+			LED &= ~(1<<PC5);	
+			USART_SendString("LED_OFF");
+		}
+		else
+		USART_SendString("Select proper option"); 
+	}
+}
 */
