@@ -62,7 +62,6 @@ float upSamples = 0;
 char prevButtonDown = 0;
 
 // Boolean to improve entry
-char justFinishedWord = 1;
 char justFinishedChar = 1;
 	
 //  Button booleans
@@ -72,13 +71,14 @@ char buttonDown = 0;
 
 // Prototypes
 // /////////////////////////////////
-char hashInputs();
-void lcd_initText();
-void lcd_printEntered();
-void lcd_printMsg();
-void lcd_showInputArr();
-void lcd_strobe();
-void resetInputArr();
+char hash_inputs();
+void lcd_show_input_arr();
+void lcd_clr_top();
+void lcd_clr_bot();
+void lcd_dah();
+void lcd_dit();
+void lcd_bad();
+void reset_input_arr(); // TODO: make sure there's no overflow of previous command
 
 // bluetooth functions
 void power_on_hc05(void);
@@ -121,74 +121,63 @@ ISR(INT0_vect){
 
 // Timer1 Overflow ISR
 ISR(TIMER1_COMPA_vect){
+	char too_long = 0x00;
 	buttonDown = !(PINC & (1<<5));
 	
 	if (buttonDown) {
 		downSamples += 1;
 		if (downSamples >= 4 * SAMPLES_PER_UNIT){
-			lcd_printMsg("Too Long");
 			PORTC |= (1<<5);
 			justFinishedChar = 1;
-			justFinishedWord = 1;
-			resetInputArr();
+			//lcd_gotoxy(0,0);
+			// lcd_puts("Oh no.");
+			reset_input_arr(); // TODO: This is the overflow input case thing
+			lcd_show_input_arr();
+			too_long = 0x01;
 		}
-		//lcd_printMsg("Down");
 	}
+
 	else {
 		upSamples += 1;
-		if ((upSamples >= 20 * SAMPLES_PER_UNIT) && (!justFinishedWord)) {
-			lcd_printMsg("Word Done");
-			justFinishedWord = 1;
-			lcd_gotoxy(8, 1);
-			lcd_puts("        ");
-			lcd_puts("  ");
-		}
-		else if ((upSamples >= 5 * SAMPLES_PER_UNIT) && (!justFinishedChar)) {
-			lcd_printMsg("Char Done");
-			lcd_showInputArr();
-			char inputChar = hashInputs();
-			lcd_gotoxy(14,1);
+		if ((upSamples >= 5 * SAMPLES_PER_UNIT) && (!justFinishedChar)) {
+			lcd_show_input_arr();
+			char inputChar = hash_inputs();
+			lcd_gotoxy(6,1);
 			lcd_putc(':');
 			lcd_putc(inputChar);
-			USART_TxChar(inputChar);
+			USART_TxChar(inputChar); // TODO: prevent ! sending
 			justFinishedChar = 1;
-			resetInputArr();
+			reset_input_arr();
 		}
-		//lcd_printMsg("Up  ");
 	}
 	if ((buttonDown != prevButtonDown) && (buttonDown)) { // just pressed
-		justFinishedWord = 0;
 		justFinishedChar = 0;
 		downSamples = 0;
 		upSamples = 0;
-		//lcd_printMsg("Press");
 	}
 	else if ((buttonDown != prevButtonDown) && (!buttonDown) && (inputIndex < 6)) { // just released + have room for more entries
 		if (downSamples >= 1 * SAMPLES_PER_UNIT){
-			lcd_printMsg("Dah");
+			lcd_dah();
 			input[inputIndex] = 2;
 			inputIndex++;
-			lcd_showInputArr();
+			lcd_show_input_arr();
 		}
 		else { //(downSamples >= 1 * samplesPerUnit){
-			lcd_printMsg("Dit");
+			lcd_dit();
 			input[inputIndex] = 1;
 			inputIndex++;
-			lcd_showInputArr();
+			lcd_show_input_arr();
 		}
-		//else {
-			//lcd_printMsg("Too Short");
-			//justFinishedChar = 1;
-			//justFinishedWord = 1;
-			//resetInputArr();
-		//}
 		downSamples = 0;
 		upSamples = 0;
-		//lcd_printMsg("Release");
 	}
 	
 	// store state for next operation, in order to identify pos and neg edges
 	prevButtonDown = buttonDown;
+	if (too_long == 0x01){
+		reset_input_arr();
+		lcd_show_input_arr();
+	}
 }
 
 // /////////////////////////////////
@@ -229,7 +218,7 @@ int main(void)
 	//USART_SendString("AT+NAME=M\r\n");
 	//USART_SendString("AT+NAME?\r\n");
 	//USART_SendString("AT+ADDR?\r\n");
-	USART_SendString("HELLO");
+	//USART_SendString("HELLO");
 	char data_in;
 	int num_chars = 0;
 
@@ -237,6 +226,8 @@ int main(void)
     while (1) 
     {
 		data_in = USART_RxChar();
+		cli();
+		lcd_gotoxy(num_chars, 0);
 		if (data_in != '\r' && data_in != '\n'){
 			lcd_putc(data_in);
 			num_chars++;
@@ -246,10 +237,10 @@ int main(void)
 		}
 
 		if (num_chars > 15){
-			lcd_gotoxy(0,1);
+			lcd_gotoxy(0,0);
 			num_chars = 0;
 		}
-
+		sei();
 	   
     }
 } 
@@ -286,43 +277,48 @@ void blue_tooth_to_command_mode(void) {
 
 // Quick Printing Methods
 // ///////////////////////////////
-
-void lcd_initText(void) {
-	lcd_clrscr();
-	lcd_home();
-	lcd_puts("Msg:");
-	lcd_gotoxy(0, 1);
-	lcd_puts("Entered:");
+void lcd_clr_top(){
+	lcd_gotoxy(0,0);
+	lcd_puts("                ");
 }
 
-void lcd_printMsg(const char *s){
-	lcd_gotoxy(5, 0);
-	lcd_puts("           ");
-	lcd_gotoxy(5, 0);
-	lcd_puts(s);
+void lcd_clr_bot(){
+	lcd_gotoxy(0,1);
+	lcd_puts("                ");
 }
 
-void lcd_printEntered(const char *s){
-	lcd_gotoxy(8, 1);
-	lcd_puts("        ");
-	lcd_gotoxy(8, 1);
-	lcd_puts(s);
+void lcd_dah(){
+	lcd_gotoxy(13,1);
+	lcd_puts("Dah");
+}
+
+void lcd_dit(){
+	lcd_gotoxy(13,1);
+	lcd_puts("Dit");
+}
+
+void lcd_bad(){
+	lcd_gotoxy(13,1);
+	lcd_puts("Bad");
 }
 // ///////////////////////////////
 
 // Reveal input array
-void lcd_showInputArr(){
+void lcd_show_input_arr(){
 	// Showing the input array adds 20% to memory due to sprintf
 	char buff[7];
 	int i=0;
 	int index = 0;
 	for (i=0; i<6; i++)
 		index += sprintf(&buff[index], "%d", input[i]);
-	lcd_printEntered(buff);
+	lcd_gotoxy(0, 1);
+	lcd_puts("        ");
+	lcd_gotoxy(0, 1);
+	lcd_puts(buff);
 }
 
 // Get character from input array
-char hashInputs(){
+char hash_inputs(){
 	int i;
 	int lookupKey = 0;
 	for (i = 0; i < 6; i++){
@@ -332,27 +328,18 @@ char hashInputs(){
 	while(keys[i] != lookupKey){
 		i++;
 		if (i >= 39){
-			lcd_printEntered("BadMsg");
+			lcd_bad();
 			return '!';
 		}
 	}
 	return chars[i];
 }
 
-void resetInputArr(void){
+void reset_input_arr(void){
 	for(int i = 0; i<6; i++){
 		input[i] = 0;
 	}
 	inputIndex = 0;
-}
-
-// strobe the lcd
-void lcd_strobe(void){
-    PORTB &= ~(1<<E);
-    _delay_us(200);
-    PORTB |= (1<<E);
-    _delay_us(200);
-    PORTB &= ~(1<<E);
 }
 
 /*
@@ -363,11 +350,6 @@ morse-character:   1 unit  (up)
 ascii-character:   3 units (up)
 Word:              7 units or more (up)
 */
-
-
-
-
-
 
 
 
