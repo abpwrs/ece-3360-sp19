@@ -224,7 +224,12 @@ int main(void)
 	USART_Init(BAUDRATE); // initialize USART with 9600 baud rate 
 	
 	blue_tooth_to_command_mode();
-	USART_SendString("AT+ADDR?\r\n");
+	//USART_SendString("AT+ROLE=1\r\n");
+	//SUSART_SendString("AT\r\n");
+	//USART_SendString("AT+NAME=M\r\n");
+	//USART_SendString("AT+NAME?\r\n");
+	//USART_SendString("AT+ADDR?\r\n");
+	USART_SendString("HELLO");
 	char data_in;
 	int num_chars = 0;
 
@@ -234,6 +239,9 @@ int main(void)
 		data_in = USART_RxChar();
 		if (data_in != '\r' && data_in != '\n'){
 			lcd_putc(data_in);
+			num_chars++;
+		} else {
+			lcd_putc(' ');
 			num_chars++;
 		}
 
