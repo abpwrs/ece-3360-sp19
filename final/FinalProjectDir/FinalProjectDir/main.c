@@ -34,6 +34,9 @@
 #define LED_PORT  5
 #define MORSE_ARR_LEN 6
 #define BAUDRATE 9600
+#define BLUE_TOOTH_PORT PORTD
+#define BLUE_TOOTH_VCC 7
+#define BLUE_TOOTH_E 6
 // /////////////////////////////////
 
 // Globals
@@ -76,6 +79,13 @@ void lcd_printMsg();
 void lcd_showInputArr();
 void lcd_strobe();
 void resetInputArr();
+
+// bluetooth functions
+void power_on_hc05(void);
+void power_off_hc05(void);
+void enable_on_hc05(void);
+void enable_off_hc05(void);
+void blue_tooth_to_command_mode(void);
 
 ////////////////////////////////////
 
@@ -185,16 +195,17 @@ ISR(TIMER1_COMPA_vect){
 
 // Main Loop
 // ///////////////////////////////
-/*
 int main(void)
 {
     //LCD Data Direction Configuration
-    DDRC |= (1<<D4) | (1<<D5) | (1<<D6) | (1<<D7) | (1<<RS) | (1<<E);
+    DDRC |= (1<<D4) | (1<<D5) | (1<<D6) | (1<<D7) ;
+	DDRB |= (1<<RS) | (1<<E);
+	DDRD |= (1<<PD6) | (1<<PD7);
 
 	// Initial LCD Config
 	lcd_init(LCD_DISP_ON_CURSOR);
 	lcd_home();
-	lcd_initText();
+	// lcd_initText();
 	
 	// Turn off the LED to use for button feedback
 	PORTC |= (1<<5);
@@ -211,52 +222,56 @@ int main(void)
 	// Turn on sampling timer
 	timer1_init();
 	USART_Init(BAUDRATE); // initialize USART with 9600 baud rate 
-
-
+	
+	// blue_tooth_to_command_mode();
+	_delay_ms(10000);
+	USART_SendString("AT\r\n");
+	char data_in;
+	int num_chars = 0;
 
     // infinite loop
     while (1) 
     {
-
+		data_in = USART_RxChar();
+		lcd_putc(data_in);
+		num_chars++;
+		if (num_chars > 15){
+			lcd_clrscr();
+			lcd_home();
+			num_chars = 0;
+		}
 
 	   
     }
-} */
-
-
-
-// bluetooth hello world main
-
-#define LED PORTC
-int main(void)
-{
-	char Data_in;
-	DDRC = 0xff;		// make PORT as output port 
-	lcd_init(LCD_DISP_ON_CURSOR);
-	lcd_home();
-	USART_Init(9600);	// initialize USART with 9600 baud rate 
-	LED = 0;
-	int chars = 0;
-	while(1)
-	{
-		
-		
-		Data_in = USART_RxChar();	         // receive data from Bluetooth device
-		lcd_putc(Data_in);
-		chars++;
-		if (chars > 15){
-			lcd_clrscr();
-			chars = 0;
-			lcd_home();
-			USART_SendString("FULL!");
-		}
-	}
 } 
 
 
 
 // ///////////////////////////////
 
+
+// bluetooth functions
+// ///////////////////////////////
+void power_on_hc05(void) {
+	BLUE_TOOTH_PORT |= (1<<BLUE_TOOTH_VCC);
+}
+void power_off_hc05(void) {
+	BLUE_TOOTH_PORT &= ~(1<<BLUE_TOOTH_VCC);
+}
+void enable_on_hc05(void) {
+	BLUE_TOOTH_PORT |= (1<<BLUE_TOOTH_E);
+}
+void enable_off_hc05(void) {
+	BLUE_TOOTH_PORT &= ~(1<<BLUE_TOOTH_E);
+}
+void blue_tooth_to_command_mode(void) {
+	enable_on_hc05();
+	_delay_us(50);
+	power_on_hc05();
+	_delay_us(50);
+}
+
+// ///////////////////////////////
 
 // Quick Printing Methods
 // ///////////////////////////////
@@ -382,4 +397,34 @@ int main(void)
 		USART_SendString("Select proper option"); 
 	}
 }
+*/
+
+// bluetooth hello world main
+/*
+#define LED PORTC
+int main(void)
+{
+	char Data_in;
+	DDRC = 0xff;		// make PORT as output port 
+	lcd_init(LCD_DISP_ON_CURSOR);
+	lcd_home();
+	USART_Init(9600);	// initialize USART with 9600 baud rate 
+	LED = 0;
+	int chars = 0;
+	while(1)
+	{
+		
+		
+		Data_in = USART_RxChar();	         // receive data from Bluetooth device
+		lcd_putc(Data_in);
+		chars++;
+		if (chars > 15){
+			lcd_clrscr();
+			chars = 0;
+			lcd_home();
+			USART_SendString("FULL!");
+		}
+	}
+} 
+
 */
