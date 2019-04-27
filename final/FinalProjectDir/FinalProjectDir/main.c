@@ -47,9 +47,9 @@
 #define SAMPLES_PER_UNIT 26 // @ 80/second samples 80/fUnit = 26
 
 // Character mapping (dictionary out of two array cross order indexed)
-int primes[] = {5, 7, 13, 17, 19, 23};
-int keys[39] = {243, 486, 405, 360, 324, 648, 567, 594, 675, 621, 702, 432, 351, 378, 459, 603, 630, 387, 477, 441, 468, 693, 369, 612, 639, 684, 726, 483, 402, 375, 366, 363, 606, 687, 714, 723, 692, 455, 400};
-char chars[39] = {'E', 'T', 'A', 'H', 'I', 'M', 'N', 'D', 'G', 'K', 'O', 'R', 'S', 'U', 'W', 'B', 'C', 'F', 'J', 'L', 'P', 'Q', 'V', 'X', 'Y', 'Z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ',', '.', '?'};
+#define TOTAL_CHARS 40
+int keys[TOTAL_CHARS] = {243, 486, 405, 360, 324, 648, 567, 594, 675, 621, 702, 432, 351, 378, 459, 603, 630, 387, 477, 441, 468, 693, 369, 612, 639, 684, 726, 483, 402, 375, 366, 363, 606, 687, 714, 723, 692, 455, 400, 364};
+char chars[TOTAL_CHARS] = {'E', 'T', 'A', 'H', 'I', 'M', 'N', 'D', 'G', 'K', 'O', 'R', 'S', 'U', 'W', 'B', 'C', 'F', 'J', 'L', 'P', 'Q', 'V', 'X', 'Y', 'Z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ',', '.', '?', ' '};
 
 // Input
 volatile int input[MORSE_ARR_LEN] = {0,0,0,0,0,0};
@@ -224,8 +224,8 @@ int main(void)
 	//USART_SendString("AT+ADDR?\r\n");
 	//USART_SendString("AT+ROLE?\r\n");
 	//USART_SendString("AT+ROLE=1\r\n");
-	//USART_SendString("AT+BIND=14:3:5fa85"); // Addr of master: used to program slave (ours)
-	//USART_SendString("AT+BIND=14:3:5f6f4"); // Addr of slave: used to program master (ted's)
+	//USART_SendString("AT+BIND=14:3:5fa85\r\n"); // Addr of master: used to program slave (ours)
+	//USART_SendString("AT+BIND=14:3:5f6f4\r\n"); // Addr of slave: used to program master (ted's)
 	//USART_SendString("AT+BIND?\r\n");
 	
 	char data_in;
@@ -356,7 +356,7 @@ char hash_inputs(){
 	int i = 0;
 	while(keys[i] != lookupKey){
 		i++;
-		if (i >= 39){
+		if (i >= TOTAL_CHARS){
 			lcd_bad();
 			return '!';
 		}
