@@ -1,6 +1,6 @@
 HC-05 Addrs
 NAP:UAP:LAP
 
-Ted (Master - Role 1): 14:3:5fa85
-Ours (Slave - Role 0) : 14:3:5f6f4
+Ted (Master - Role 1): 14:3:5f6f4
+Ours (Slave - Role 0) : 14:3:5fa85
 ( Confirmed as of 4/27)

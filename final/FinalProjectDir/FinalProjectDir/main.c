@@ -224,8 +224,8 @@ int main(void)
 	//USART_SendString("AT+ADDR?\r\n");
 	//USART_SendString("AT+ROLE?\r\n");
 	//USART_SendString("AT+ROLE=1\r\n");
-	//USART_SendString("AT+BIND=14:3:5fa85\r\n"); // Addr of master: used to program slave (ours)
-	//USART_SendString("AT+BIND=14:3:5f6f4\r\n"); // Addr of slave: used to program master (ted's)
+	//USART_SendString("AT+BIND=14:3:5fa85\r\n"); // Addr of slave: used to program master (ted's)
+	//USART_SendString("AT+BIND=14:3:5f6f4\r\n"); // Addr of master: used to program slave (ours)
 	//USART_SendString("AT+BIND?\r\n");
 	
 	char data_in;
@@ -237,7 +237,7 @@ int main(void)
 		data_in = USART_RxChar();
 		cli();
 		if (num_chars > 15){
-			lcd_clr_top();
+			//lcd_clr_top();
 			num_chars = 0;
 		}
 		lcd_gotoxy(num_chars, 0);
