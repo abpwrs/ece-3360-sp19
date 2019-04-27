@@ -14,18 +14,24 @@ from collections import Counter
 keys = []
 mapping = []
 allCombos = []
-primes  = [5,7,13,17,19,23] # Generates unique list of keys to pair
 
-# https://stackoverflow.com/questions/5278122/checking-if-all-elements-in-a-list-are-unique
-def isUnique(array):
-  result = dict(Counter(array)).values()
-  print(result)
-  for i in result:
-    if i is not 1:
-      return False
+def isMappingUnique():
+  array = []
+  for eachPair in mapping:
+    array.append(eachPair[1])
+  results = dict(Counter(array))
+  nonUn = 0
+
+  for key in results:
+    if results[key] is not 1:
+      nonUn += 1
+      print(str(key) + " - " + str(results[key]))
+
+  print("Total Non-Unique keys - "+str(nonUn))
+  return (nonUn is 0)
 
 def printKeysForC():
-  result = "int keys[39] = {"
+  result = "TYPE? keys[39] = {"
   for eachTuple in mapping:
     result += (str(eachTuple[1]) + ",")
   result = result[:-1] + '};'
@@ -51,31 +57,48 @@ def processCSV():
         mapping.append( (row[0], uniqueSum) )
       lineCount += 1
 
-def hashAllCombos():
+def hashEachPossibleInput():
+  primes = [7,31,51,41,43,47]
+
   for possibleInputSet in allCombos:
-    hashOutput = 0
+    
+    hashOutput = 1
     for i in range(0,6):
         hashOutput += int(possibleInputSet[i]) * primes[i]
-    keys.append(hashOutput)
+        #hashOutput *= primes[int(possibleInputSet[i])]
+
+    mapping.append( (possibleInputSet, hashOutput) )
 
 def getAllCombos():
   for a in range(0,3):
-    if a is not 0:
+    if a is 0:
+      allCombos.append("000000")
+    else:
       for b in range(0,3):
-        if b is not 0:
+        if b is 0:
+          allCombos.append(str(a) + "00000")
+        else:
           for c in range(0,3):
-            if c is not 0:
+            if c is 0:
+              allCombos.append(str(a) + str(b) + "0000")
+            else:
               for d in range(0,3):
-                if d is not 0:
+                if d is 0:
+                  allCombos.append(str(a) + str(b) + str(c) + "000")
+                else:
                   for e in range(0,3):
-                    if e is not 0:
+                    if e is 0:
+                      allCombos.append(str(a) + str(b) + str(c) + str(d) + "00")
+                    else:
                       for f in range(0,3):
-                        allCombos.append(str(a)+str(b)+str(c)+str(d)+str(e)+str(f))
+                        allCombos.append(str(a)+str(b)+str(c)
+                        +str(d)+str(e)+str(f))
 
-#getAllCombos()
-#print(len(allCombos))
+print("")
 getAllCombos()
-hashAllCombos()
-print("Keys are Unique? - "+str(isUnique(keys)))
+print("Values to hash - " + str(len(allCombos)))
+hashEachPossibleInput()
+#print(keys)
+print("Keys are Unique? - " + str(isMappingUnique()))
 #printCharsForC()
 #printKeysForC()
