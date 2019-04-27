@@ -54,7 +54,7 @@ char chars[39] = {'E', 'T', 'A', 'H', 'I', 'M', 'N', 'D', 'G', 'K', 'O', 'R', 'S
 // Input
 volatile int input[MORSE_ARR_LEN] = {0,0,0,0,0,0};
 volatile int inputIndex = 0;
-
+char too_long = 0x00;
 float downSamples = 0;
 float upSamples = 0;
 
@@ -121,8 +121,8 @@ ISR(INT0_vect){
 
 // Timer1 Overflow ISR
 ISR(TIMER1_COMPA_vect){
-	char too_long = 0x00;
-	buttonDown = !(PINC & (1<<5));
+	
+	buttonDown = !(PIND & (1<<2));
 	
 	if (buttonDown) {
 		downSamples += 1;
@@ -158,7 +158,10 @@ ISR(TIMER1_COMPA_vect){
 		upSamples = 0;
 	}
 	else if ((buttonDown != prevButtonDown) && (!buttonDown) && (inputIndex < 6)) { // just released + have room for more entries
-		if (downSamples >= 1 * SAMPLES_PER_UNIT){
+		if (too_long){
+			too_long = 0x00;
+		}
+		else if (downSamples >= 1 * SAMPLES_PER_UNIT){
 			lcd_dah();
 			input[inputIndex] = 2;
 			inputIndex++;
@@ -197,7 +200,6 @@ int main(void)
 	// Initial LCD Config
 	lcd_init(LCD_DISP_ON_CURSOR);
 	lcd_home();
-	// lcd_initText();
 	
 	// Turn off the LED to use for button feedback
 	PORTC |= (1<<5);
@@ -256,7 +258,7 @@ int main(void)
 
 // ///////////////////////////////
 // https://www.geeksforgeeks.org/convert-base-decimal-vice-versa/
-int toDecimal(int *arr, int base) 
+int toDecimal(volatile int *arr, int base) 
 { 
     int power = 1;
     int num = 0;  
@@ -350,7 +352,7 @@ void lcd_show_input_arr(){
 
 // Get character from input array
 char hash_inputs(){
-	int lookupKey = toDecimal(, 3)
+	int lookupKey = toDecimal(input, 3);
 	int i = 0;
 	while(keys[i] != lookupKey){
 		i++;
