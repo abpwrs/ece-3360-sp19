@@ -9,6 +9,7 @@
 #     for convenience.
 
 import csv
+import numpy as np
 from collections import Counter
 
 keys = []
@@ -58,15 +59,20 @@ def processCSV():
       lineCount += 1
 
 def hashEachPossibleInput():
-  primes = [7,31,51,41,43,47]
+  primes = np.array([3,3,5,7,11,13])
+
 
   for possibleInputSet in allCombos:
-    
+    in_set = [int(e) + 1 for e in possibleInputSet]
+    base = sum([int(e) for e in possibleInputSet])
     hashOutput = 1
-    for i in range(0,6):
-        hashOutput += int(possibleInputSet[i]) * primes[i]
-        #hashOutput *= primes[int(possibleInputSet[i])]
-
+    primes += base
+    for i in range(6):
+        # hashOutput *= int(possibleInputSet[i]) * primes[i]
+        # hashOutput *= (primes[int(possibleInputSet[i])] + int(possibleInputSet[i]))
+        hashOutput += primes[in_set[i]] * in_set[i]
+    if hashOutput == 10179.0:
+      print(in_set)
     mapping.append( (possibleInputSet, hashOutput) )
 
 def getAllCombos():
@@ -94,11 +100,20 @@ def getAllCombos():
                         allCombos.append(str(a)+str(b)+str(c)
                         +str(d)+str(e)+str(f))
 
+
 print("")
 getAllCombos()
 print("Values to hash - " + str(len(allCombos)))
 hashEachPossibleInput()
-#print(keys)
+# print(keys)
 print("Keys are Unique? - " + str(isMappingUnique()))
 #printCharsForC()
 #printKeysForC()
+#print(mapping)
+m = 0
+for e in mapping:
+  if e[1] > m:
+    m = e[1]
+
+print(m)
+
