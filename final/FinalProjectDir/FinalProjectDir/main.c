@@ -236,6 +236,10 @@ int main(void)
     {
 		data_in = USART_RxChar();
 		cli();
+		if (num_chars > 15){
+			lcd_clr_top();
+			num_chars = 0;
+		}
 		lcd_gotoxy(num_chars, 0);
 		if (data_in != '\r' && data_in != '\n'){
 			lcd_putc(data_in);
@@ -244,13 +248,7 @@ int main(void)
 			lcd_putc(' ');
 			num_chars++;
 		}
-
-		if (num_chars > 15){
-			lcd_gotoxy(0,0);
-			num_chars = 0;
-		}
 		sei();
-	   
     }
 } 
 
