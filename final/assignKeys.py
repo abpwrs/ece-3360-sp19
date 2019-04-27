@@ -109,6 +109,11 @@ hashEachPossibleInput()
 print(keys)
 print("Keys are Unique? - " + str(isMappingUnique()))
 #printCharsForC()
-#printKeysForC()
-print(mapping)
+printKeysForC()
+#print(mapping)
+""" m = 0
+for e in mapping:
+  if e[1] > m:
+    m = e[1]
 
+print(m) """

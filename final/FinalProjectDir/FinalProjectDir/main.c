@@ -216,12 +216,16 @@ int main(void)
 	USART_Init(BAUDRATE); // initialize USART with 9600 baud rate 
 	
 	blue_tooth_to_command_mode();
-	//USART_SendString("AT+ROLE=1\r\n");
 	//SUSART_SendString("AT\r\n");
 	//USART_SendString("AT+NAME=M\r\n");
 	//USART_SendString("AT+NAME?\r\n");
 	//USART_SendString("AT+ADDR?\r\n");
-	//USART_SendString("HELLO");
+	//USART_SendString("AT+ROLE?\r\n");
+	//USART_SendString("AT+ROLE=1\r\n");
+	//USART_SendString("AT+BIND=14:3:5fa85"); // Addr of master: used to program slave (ours)
+	//USART_SendString("AT+BIND=14:3:5f6f4"); // Addr of slave: used to program master (ted's)
+	//USART_SendString("AT+BIND?\r\n");
+	
 	char data_in;
 	int num_chars = 0;
 
