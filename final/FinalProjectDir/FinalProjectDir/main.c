@@ -48,8 +48,8 @@
 
 // Character mapping (dictionary out of two array cross order indexed)
 int primes[] = {5, 7, 13, 17, 19, 23};
-char chars[39] = {'E','T','A','H','I','M','N','D','G','K','O','R','S','U','W','B','C','F','J','L','P','Q','V','X','Y','Z','0','1','2','3','4','5','6','7','8','9',',','.','?'};
-int keys[39] = {5,10,19,42,12,24,17,30,37,43,50,32,25,38,45,47,60,55,79,49,62,71,59,64,77,54,122,117,110,97,80,61,66,73,86,103,138,131,114};
+int keys[39] = {243, 486, 405, 360, 324, 648, 567, 594, 675, 621, 702, 432, 351, 378, 459, 603, 630, 387, 477, 441, 468, 693, 369, 612, 639, 684, 726, 483, 402, 375, 366, 363, 606, 687, 714, 723, 692, 455, 400};
+char chars[39] = {'E', 'T', 'A', 'H', 'I', 'M', 'N', 'D', 'G', 'K', 'O', 'R', 'S', 'U', 'W', 'B', 'C', 'F', 'J', 'L', 'P', 'Q', 'V', 'X', 'Y', 'Z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ',', '.', '?'};
 
 // Input
 volatile int input[MORSE_ARR_LEN] = {0,0,0,0,0,0};
@@ -251,7 +251,26 @@ int main(void)
 
 
 // ///////////////////////////////
+// https://www.geeksforgeeks.org/convert-base-decimal-vice-versa/
+int toDecimal(int *arr, int base) 
+{ 
+    int power = 1;
+    int num = 0;  
 
+    for (int i = MORSE_ARR_LEN - 1; i >= 0; i--) 
+    { 
+        if (arr[i] >= base) 
+        { 
+           printf("Invalid Number"); 
+           return -1; 
+        } 
+        num += arr[i] * power; 
+        power = power * base; 
+    } 
+    return num; 
+} 
+
+// ///////////////////////////////
 
 // bluetooth functions
 // ///////////////////////////////
@@ -327,12 +346,8 @@ void lcd_show_input_arr(){
 
 // Get character from input array
 char hash_inputs(){
-	int i;
-	int lookupKey = 0;
-	for (i = 0; i < 6; i++){
-		lookupKey += primes[i]*input[i];
-	}
-	i = 0;
+	int lookupKey = toDecimal(, 3)
+	int i = 0;
 	while(keys[i] != lookupKey){
 		i++;
 		if (i >= 39){

@@ -16,6 +16,17 @@ keys = []
 mapping = []
 allCombos = []
 
+def hash_string(in_str):
+    primes = np.array([3,3,5,7,11,13])
+    in_set = [int(e) + 1 for e in in_str]
+    base = sum([int(e) for e in in_str])
+    hashOutput = 1
+    primes += base
+    for i in range(6):
+        hashOutput += primes[in_set[i]] * in_set[i]
+    return hashOutput
+
+
 def isMappingUnique():
   array = []
   for eachPair in mapping:
@@ -51,29 +62,18 @@ def processCSV():
     lineCount = 0
     for row in csvReader:
       if (lineCount != 0):
-        uniqueSum = 0
-        for i in range(0,6):
-          uniqueSum += primes[i]*int(str(row[2])[i])
+        uniqueSum = hash_string(row[2])
         keys.append(uniqueSum)
         mapping.append( (row[0], uniqueSum) )
       lineCount += 1
 
 def hashEachPossibleInput():
-  primes = np.array([3,3,5,7,11,13])
-
-
   for possibleInputSet in allCombos:
-    in_set = [int(e) + 1 for e in possibleInputSet]
-    base = sum([int(e) for e in possibleInputSet])
-    hashOutput = 1
-    primes += base
-    for i in range(6):
-        # hashOutput *= int(possibleInputSet[i]) * primes[i]
-        # hashOutput *= (primes[int(possibleInputSet[i])] + int(possibleInputSet[i]))
-        hashOutput += primes[in_set[i]] * in_set[i]
-    if hashOutput == 10179.0:
-      print(in_set)
-    mapping.append( (possibleInputSet, hashOutput) )
+    out_tmp = hash_string(possibleInputSet)
+    mapping.append( (possibleInputSet, out_tmp) )
+
+
+
 
 def getAllCombos():
   for a in range(0,3):
@@ -103,17 +103,12 @@ def getAllCombos():
 
 print("")
 getAllCombos()
-print("Values to hash - " + str(len(allCombos)))
+#print("Values to hash - " + str(len(allCombos)))
 hashEachPossibleInput()
-# print(keys)
+# processCSV()
+print(keys)
 print("Keys are Unique? - " + str(isMappingUnique()))
 #printCharsForC()
 #printKeysForC()
-#print(mapping)
-m = 0
-for e in mapping:
-  if e[1] > m:
-    m = e[1]
-
-print(m)
+print(mapping)
 
