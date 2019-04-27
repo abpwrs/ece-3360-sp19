@@ -126,11 +126,11 @@ ISR(TIMER1_COMPA_vect){
 	
 	if (buttonDown) {
 		downSamples += 1;
-		if (downSamples >= 4 * SAMPLES_PER_UNIT){
-			PORTC |= (1<<5);
+		if (downSamples >= 6 * SAMPLES_PER_UNIT){
+			//PORTC |= (1<<5);
 			justFinishedChar = 1;
-			//lcd_gotoxy(0,0);
-			// lcd_puts("Oh no.");
+			lcd_gotoxy(0,0);
+			lcd_puts("Oh no.");
 			reset_input_arr(); // TODO: This is the overflow input case thing
 			lcd_show_input_arr();
 			too_long = 0x01;
@@ -145,7 +145,9 @@ ISR(TIMER1_COMPA_vect){
 			lcd_gotoxy(6,1);
 			lcd_putc(':');
 			lcd_putc(inputChar);
-			USART_TxChar(inputChar); // TODO: prevent ! sending
+			if (inputChar != '!'){
+				USART_TxChar(inputChar); // TODO: prevent ! sending
+			}
 			justFinishedChar = 1;
 			reset_input_arr();
 		}
@@ -176,6 +178,7 @@ ISR(TIMER1_COMPA_vect){
 	prevButtonDown = buttonDown;
 	if (too_long == 0x01){
 		reset_input_arr();
+		
 		lcd_show_input_arr();
 	}
 }
@@ -300,6 +303,11 @@ void lcd_dit(){
 void lcd_bad(){
 	lcd_gotoxy(13,1);
 	lcd_puts("Bad");
+}
+
+void lcd_clear_bot_three(){
+	lcd_gotoxy(13,1);
+	lcd_puts("   ");
 }
 // ///////////////////////////////
 
