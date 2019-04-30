@@ -199,6 +199,8 @@ int main(void)
 
 	// Initial LCD Config
 	lcd_init(LCD_DISP_ON_CURSOR);
+	lcd_gotoxy(0,0);
+	lcd_puts("Msg:");
 	lcd_home();
 	
 	// Turn off the LED to use for button feedback
@@ -229,7 +231,7 @@ int main(void)
 	//USART_SendString("AT+BIND?\r\n");
 	
 	char data_in;
-	int num_chars = 0;
+	int num_chars = 4;
 
     // infinite loop
     while (1) 
@@ -238,7 +240,7 @@ int main(void)
 		cli();
 		if (num_chars > 15){
 			//lcd_clr_top();
-			num_chars = 0;
+			num_chars = 4;
 		}
 		lcd_gotoxy(num_chars, 0);
 		if (data_in != '\r' && data_in != '\n'){
@@ -377,12 +379,6 @@ morse-character:   1 unit  (up)
 ascii-character:   3 units (up)
 Word:              7 units or more (up)
 */
-
-
-
-
-
-
 
 // bluetooth blinky
 // http://www.electronicwings.com/avr-atmega/hc-05-bluetooth-module-interfacing-with-atmega1632
