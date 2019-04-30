@@ -78,7 +78,7 @@ void lcd_clr_bot();
 void lcd_dah();
 void lcd_dit();
 void lcd_bad();
-void reset_input_arr(); // TODO: make sure there's no overflow of previous command
+void reset_input_arr();
 
 // bluetooth functions
 void power_on_hc05(void);
@@ -127,11 +127,8 @@ ISR(TIMER1_COMPA_vect){
 	if (buttonDown) {
 		downSamples += 1;
 		if (downSamples >= 6 * SAMPLES_PER_UNIT){
-			//PORTC |= (1<<5);
 			justFinishedChar = 1;
-			lcd_gotoxy(0,0);
-			lcd_puts("Oh no.");
-			reset_input_arr(); // TODO: This is the overflow input case thing
+			reset_input_arr();
 			lcd_show_input_arr();
 			too_long = 0x01;
 		}
@@ -146,7 +143,7 @@ ISR(TIMER1_COMPA_vect){
 			lcd_putc(':');
 			lcd_putc(inputChar);
 			if (inputChar != '!'){
-				USART_TxChar(inputChar); // TODO: prevent ! sending
+				USART_TxChar(inputChar);
 			}
 			justFinishedChar = 1;
 			reset_input_arr();
@@ -201,7 +198,6 @@ int main(void)
 	lcd_init(LCD_DISP_ON_CURSOR);
 	lcd_gotoxy(0,0);
 	lcd_puts("Msg:");
-	lcd_home();
 	
 	// Turn off the LED to use for button feedback
 	PORTC |= (1<<5);
@@ -239,7 +235,7 @@ int main(void)
 		data_in = USART_RxChar();
 		cli();
 		if (num_chars > 15){
-			//lcd_clr_top();
+			lcd_clr_top();
 			num_chars = 4;
 		}
 		lcd_gotoxy(num_chars, 0);
@@ -307,7 +303,7 @@ void blue_tooth_to_command_mode(void) {
 // ///////////////////////////////
 void lcd_clr_top(){
 	lcd_gotoxy(0,0);
-	lcd_puts("                ");
+	lcd_puts("Msg:            ");
 }
 
 void lcd_clr_bot(){
