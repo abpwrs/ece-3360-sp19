@@ -1,0 +1,44 @@
+idea
+
+asumming none of these int variables overflow: 
+  (scale the timer, make them floats, reset to 0 on word completion should 
+  avoid going over)
+
+// initial
+int[6] inputs = [0,0,0,0,0,0] // 0: nothing 1: short 2: long
+float downLength = 0
+float upLength = 0
+
+bool prevState = false
+
+*timer always running, every tick triggers an interrupt (overflow not important)
+that interrupt:
+  boolean buttonDown = buttonDown()
+  boolean buttonUp = !buttonDown
+
+  if buttonDown // User still holding down the button
+    downLength++
+
+  if buttonUp // User not holding down the button
+    upLength++
+
+  // Cases:
+  if posEdge: (Button was *just* released)
+    if downLength >= 3units:
+      add a long to inputs
+    else if downLength >= 1unit:
+      add a short to inputs
+
+  if negEdge:
+    if posLenth >= 3units:
+      // determine ascii character from inputs
+
+  if upLength >= 7units:
+    // Word Case
+    printSpace();
+  
+  prevState = buttonDown()
+
+wordComplete():
+  resets inputs = [0,0,0,0,0,0]
+  sends space character
