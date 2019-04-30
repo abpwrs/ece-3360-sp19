@@ -1,6 +1,3 @@
-
-
-
 int toDeci(char*,int);
 int val(char c);
 
