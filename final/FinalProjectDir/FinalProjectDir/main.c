@@ -266,9 +266,10 @@ int main(void)
 	//USART_SendString("AT+ADDR?\r\n");
 	//USART_SendString("AT+ROLE?\r\n");
 	//USART_SendString("AT+ROLE=1\r\n");
-	//USART_SendString("AT+BIND=14:3:5fa85\r\n"); // Addr of slave: used to program master (ted's)
-	//USART_SendString("AT+BIND=14:3:5f6f4\r\n"); // Addr of master: used to program slave (ours)
+	//USART_SendString("AT+BIND=14,3,5fa85\r\n"); // Addr of slave: used to program master (ted's)
+	//USART_SendString("AT+BIND=14,3,5f6f4\r\n"); // Addr of master: used to program slave (ours)
 	//USART_SendString("AT+BIND?\r\n");
+	//USART_SendString("AT+CMODE=0\r\n");
 	
 	char data_in;
 	int num_chars = 4;
